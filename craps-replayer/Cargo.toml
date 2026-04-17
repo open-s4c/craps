@@ -1,0 +1,46 @@
+[package]
+name = "craps-replayer"
+version = "0.1.0"
+edition = "2024"
+license = "0bsd"
+
+[lib]
+name = "replayer"
+crate-type = ["staticlib", "rlib"]
+
+[features]
+default = []
+
+interpose-memcpy = []
+lto = ["dice-rs/lto"]
+
+log-fatal = ["dice-rs/log-fatal"]
+log-info  = ["dice-rs/log-info"]
+log-debug = ["dice-rs/log-debug"]
+
+san-thread = ["dice-rs/san-thread"]
+san-address = ["dice-rs/san-address"]
+san-undefined = ["dice-rs/san-undefined"]
+
+# Dice modules
+dice = ["dice-rs/dice"]
+dice-box = ["dice-rs/dice-box"]
+dice-cxa = ["dice-rs/dice-cxa"]
+dice-poll = ["dice-rs/dice-poll"]
+dice-pthread_cond = ["dice-rs/dice-pthread_cond"]
+dice-pthread_create = ["dice-rs/dice-pthread_create"]
+dice-pthread_mutex = ["dice-rs/dice-pthread_mutex"]
+dice-pthread_rwlock = ["dice-rs/dice-pthread_rwlock"]
+dice-self = ["dice-rs/dice-self"]
+dice-sem = ["dice-rs/dice-sem"]
+dice-tsan = ["dice-rs/dice-tsan"]
+
+[dependencies]
+craps-record = { version = "0.1", path = "../craps-record" }
+dice-rs = { workspace = true }
+ctor = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+libc = { workspace = true }
+typetag = { workspace = true }

@@ -1,0 +1,12 @@
+[workspace]
+resolver="3"
+members = ["craps-record", "craps-recorder", "craps-replayer"]
+
+[workspace.dependencies]
+dice-rs = { path = "dice-rs/dice-rs", version = "0.1" }
+ctor = "0.6.1"
+log = "0.4.28"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+libc = "0.2.177"
+typetag = "0.2"

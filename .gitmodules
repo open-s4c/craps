@@ -1,0 +1,3 @@
+[submodule "dice-rs"]
+	path = dice-rs
+	url = https://github.com/open-s4c/dice-rs.git
