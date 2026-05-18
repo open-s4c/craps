@@ -10,9 +10,15 @@ use std::{
     fs::File,
     ptr,
 };
+use std::collections::LinkedList;
 use std::io::Write;
 
 use craps_record::{Record, RecordEnum, ToRecordEnum};
+
+const CRAPS_PRIORITY: i32 = match i32::from_str_radix(env!("CRAPS_PRIORITY", "CRAPS_PRIORITY must be set"), 10) {
+    Ok(val) => val,
+    Err(_) => panic!("Failed to parse CRAPS_PRIORITY as i32")
+};
 
 pub extern "C" fn return_zero() -> i32 {
     0
@@ -22,7 +28,7 @@ pub extern "C" fn return_zero() -> i32 {
 struct Replayer {
     initd: bool,
     thread_id: Option<DiceThreadId>,
-    records: Vec<RecordEnum>,
+    records: LinkedList<RecordEnum>,
 }
 
 init_dice_state!();
@@ -54,7 +60,7 @@ impl Replayer {
         self.thread_id = Some(thread_id);
 
         let file = File::open(format!("records/craps_{thread_id}.txt")).unwrap();
-        self.records = serde_json::from_reader(file).unwrap();
+        self.records = if file.metadata().unwrap().len() == 0 { LinkedList::new() } else { serde_json::from_reader(file).unwrap() };
     }
 
     pub fn end(&mut self) -> Result<()> {
@@ -65,11 +71,11 @@ impl Replayer {
     }
 
     pub fn dequeue_record(&mut self) -> RecordEnum {
-        self.records.remove(0)
+        self.records.pop_front().unwrap()
     }
 }
 
-subscribe!(Chain::CaptureEvent, 9999, |_event: Option<&mut SelfInitEvent>, meta| {
+subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfInitEvent>, meta| {
     let thread_id = self_id(meta);
 
     REPLAYER.with(meta, |trace| {
@@ -79,7 +85,7 @@ subscribe!(Chain::CaptureEvent, 9999, |_event: Option<&mut SelfInitEvent>, meta|
     DiceResult::Ok
 });
 
-subscribe!(Chain::CaptureEvent, 9999, |_event: Option<&mut SelfFiniEvent>, meta| {
+subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfFiniEvent>, meta| {
     let thread_id = self_id(meta);
     REPLAYER.with(meta, |replayer| {
         replayer.end().unwrap();
@@ -92,8 +98,8 @@ macro_rules! define_simple_before_handlers {
           $(
               define_set_func!($event);
               subscribe!(
-                  Chain::CaptureAfter,
-                  9999,
+                  Chain::CaptureBefore,
+                  CRAPS_PRIORITY,
                   |event: Option<&mut $event>, meta| {
                           REPLAYER.with(meta, |replayer| {
                               let event = event.unwrap();
@@ -111,7 +117,7 @@ define_simple_before_handlers!(
     GetrandomEvent,
 );
 
-subscribe!(Chain::CaptureAfter, 9999, |_event: Option<&mut PollEvent>, meta| {
+subscribe!(Chain::CaptureAfter, CRAPS_PRIORITY, |_event: Option<&mut PollEvent>, meta| {
     let thread_id = self_id(meta);
     REPLAYER.with(meta, |replayer| {
         let event = _event.unwrap();
@@ -132,7 +138,7 @@ subscribe!(Chain::CaptureAfter, 9999, |_event: Option<&mut PollEvent>, meta| {
     DiceResult::Ok
 });
 
-subscribe!(Chain::CaptureAfter, 9999, |_event: Option<&mut GetrandomEvent>, meta| {
+subscribe!(Chain::CaptureAfter, CRAPS_PRIORITY, |_event: Option<&mut GetrandomEvent>, meta| {
     let thread_id = self_id(meta);
     REPLAYER.with(meta, |replayer| {
         let event = _event.unwrap();
@@ -152,3 +158,6 @@ subscribe!(Chain::CaptureAfter, 9999, |_event: Option<&mut GetrandomEvent>, meta
     });
     DiceResult::Ok
 });
+
+pub fn use_craps() {
+}

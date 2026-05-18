@@ -37,4 +37,3 @@ dice-tsan = ["dice-rs/dice-tsan"]
 dice-rs = { workspace = true }
 serde = { workspace = true }
 libc = { workspace = true }
-typetag = { workspace = true }
