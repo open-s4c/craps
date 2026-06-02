@@ -1,23 +1,22 @@
 use dice_rs::{
-    Chain, DiceEvent, DiceResult, DiceThreadId, Metadata, TypeId, events::*, init_dice_state,
+    Chain, DiceResult, DiceThreadId, events::*, init_dice_state,
     subscribe, thread::*, tls_key,
 };
 use serde_json::Result;
 use std::{
-    error::Error,
     fs::File,
 };
 use std::collections::LinkedList;
+use std::io::BufWriter;
 use std::io::Write;
-use std::panic::panic_any;
-use craps_record::{Record, RecordEnum, ToRecordEnum};
+use craps_record::{RecordEnum, ToRecordEnum};
 
 #[derive(Debug, Default)]
 struct Trace {
     initd: bool,
     thread_id: Option<DiceThreadId>,
     records: LinkedList<RecordEnum>,
-    file: Option<File>,
+    writer: Option<BufWriter<File>>,
 }
 
 init_dice_state!();
@@ -28,7 +27,7 @@ const CRAPS_PRIORITY: i32 = match i32::from_str_radix(env!("CRAPS_PRIORITY", "CR
     Ok(val) => val,
     Err(_) => panic!("Failed to parse CRAPS_PRIORITY as i32")
 };
-const TRACE_THRESHOLD: usize = 0;
+const TRACE_THRESHOLD: usize = 1;
 
 impl Trace {
     pub fn initialize(&mut self, thread_id: DiceThreadId) {
@@ -38,15 +37,16 @@ impl Trace {
         self.initd = true;
         self.thread_id = Some(thread_id);
 
-        self.file = Some(File::create(format!("records/craps_{thread_id}.txt")).unwrap());
+        self.writer = Some(BufWriter::new(File::create(format!("records/craps_{thread_id}.txt")).unwrap()));
+        println!("initialized craps trace for thread {}", thread_id);
     }
 
     pub fn end(&mut self) -> Result<()> {
         self.dump_events()?;
-        self.file
+        self.writer
             .as_mut()
             .map(|file| file.flush().expect("should be able to flush file"));
-        self.file = None;
+        self.writer = None;
         Ok(())
     }
 
@@ -69,11 +69,13 @@ impl Trace {
             return Ok(());
         }
         if let Some(tid) = self.thread_id {
-            match &mut self.file {
+            match &mut self.writer {
                 None => {
                 }
-                Some(file) => {
-                    serde_json::to_writer(file, &self.records)?;
+                Some(writer) => {
+                    while let Some(record) = self.records.pop_front() {
+                        serde_json::to_writer(&mut *writer, &record)?;
+                    }
                 }
             }
         }
@@ -115,8 +117,29 @@ macro_rules! define_simple_handlers {
 }
 
 define_simple_handlers!(
-    PollEvent,
     GetrandomEvent,
+    GetrandomEvent,
+    EpollCreate1Event,
+    EpollCtlEvent,
+    EpollWaitEvent,
+    PollEvent,
+    EventfdEvent,
+    SocketEvent,
+    SocketpairEvent,
+    GetsockoptEvent,
+    SetsockoptEvent,
+    BindEvent,
+    ConnectEvent,
+    ShutdownEvent,
+    CloseEvent,
+    ReadEvent,
+    WriteEvent,
+    ReadvEvent,
+    WritevEvent,
+    RecvmsgEvent,
+    SendmsgEvent,
+    RecvfromEvent,
+    SendtoEvent,
 );
 
 pub fn use_craps() {
