@@ -1,5 +1,6 @@
 use dice_rs::events::*;
 use serde::{Serialize, Deserialize};
+use std::ffi::CStr;
 use std::fmt::Debug;
 use std::slice;
 
@@ -7,12 +8,14 @@ use std::slice;
 pub enum RecordEnum {
     /// randomness
     GetrandomRecord(GetrandomRecord),
+    SyscallGetrandomRecord(SyscallGetrandomRecord),
     /// polling
     EpollCreate1Record(EpollCreate1Record),
     EpollCtlRecord(EpollCtlRecord),
     EpollWaitRecord(EpollWaitRecord),
     PollRecord(PollRecord),
     EventfdRecord(EventfdRecord),
+    PpollRecord(PpollRecord),
     /// socket management
     SocketRecord(SocketRecord),
     SocketpairRecord(SocketpairRecord),
@@ -31,10 +34,18 @@ pub enum RecordEnum {
     SendmsgRecord(SendmsgRecord),
     RecvfromRecord(RecvfromRecord),
     SendtoRecord(SendtoRecord),
+    OpenatRecord(OpenatRecord),
+    MmapRecord(MmapRecord),
+    RecvRecord(RecvRecord),
+    SendRecord(SendRecord),
+    /// time
+    GettimeofdayRecord(GettimeofdayRecord),
+    ClockGettimeRecord(ClockGettimeRecord),
+    TimeRecord(TimeRecord),
 }
 
 pub trait ToRecordEnum {
-    unsafe fn to_record(&self) -> RecordEnum;
+    unsafe fn to_record(&self) -> Option<RecordEnum>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,17 +74,17 @@ pub struct PollRecord {
 
 impl ToRecordEnum for PollEvent {
     // safe as long as poll call is valid, i.e., the array pointer and size are correct
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let fds_vec: Vec<Pollfd> = (0..self.nfds)
             .map(|i| unsafe { *self.fds.add(i as usize) })
             .map(Pollfd::from_libc_pollfd)
             .collect();
 
-        RecordEnum::PollRecord(PollRecord {
+        Some(RecordEnum::PollRecord(PollRecord {
             fds: fds_vec,
             timeout: self.timeout,
             ret: self.ret,
-        })
+        }))
     }
 }
 
@@ -87,14 +98,14 @@ pub struct GetrandomRecord {
 
 impl ToRecordEnum for GetrandomEvent {
     // safe as long as buf is safe
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let buf = slice::from_raw_parts(self.buf as *const u8, self.size).to_vec();
-        RecordEnum::GetrandomRecord(GetrandomRecord {
+        Some(RecordEnum::GetrandomRecord(GetrandomRecord {
             buf: buf,
             size: self.size,
             flags: self.flags,
             ret: self.ret,
-        })
+        }))
     }
 }
 
@@ -104,16 +115,18 @@ pub struct SocketRecord {
     pub type_: libc::c_int,
     pub protocol: libc::c_int,
     pub ret: libc::c_int,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for SocketEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
-        RecordEnum::SocketRecord(SocketRecord {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        Some(RecordEnum::SocketRecord(SocketRecord {
             domain: self.domain,
             type_: self.type_,
             protocol: self.protocol,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -123,10 +136,11 @@ pub struct ConnectRecord {
     pub addr: Vec<u8>,       // stores the bytes of the sockaddr
     pub addrlen: socklen_t,
     pub ret: libc::c_int,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for ConnectEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         // convert the sockaddr pointer to a byte vector
         let addr = if !self.addr.is_null() && self.addrlen > 0 {
             std::slice::from_raw_parts(self.addr as *const u8, self.addrlen as usize).to_vec()
@@ -134,12 +148,13 @@ impl ToRecordEnum for ConnectEvent {
             Vec::new()
         };
 
-        RecordEnum::ConnectRecord(ConnectRecord {
+        Some(RecordEnum::ConnectRecord(ConnectRecord {
             sockfd: self.sockfd,
             addr,
             addrlen: self.addrlen,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -151,11 +166,12 @@ pub struct SetsockoptRecord {
     pub optval: Vec<u8>,
     pub optlen: socklen_t,
     pub ret: libc::c_int,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for SetsockoptEvent {
     // safe as long as optval is valid for optlen bytes
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let optval = if self.optval.is_null() || self.optlen == 0 {
             Vec::new()
         } else {
@@ -166,14 +182,15 @@ impl ToRecordEnum for SetsockoptEvent {
                 .to_vec()
         };
 
-        RecordEnum::SetsockoptRecord(SetsockoptRecord {
+        Some(RecordEnum::SetsockoptRecord(SetsockoptRecord {
             sockfd: self.sockfd,
             level: self.level,
             optname: self.optname,
             optval,
             optlen: self.optlen,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -186,10 +203,11 @@ pub struct BindRecord {
 
     pub addrlen: socklen_t,
     pub ret: libc::c_int,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for BindEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let (sa_family, sa_data) = if self.addr.is_null() {
             (0, Vec::new())
         } else {
@@ -204,13 +222,14 @@ impl ToRecordEnum for BindEvent {
             ((*self.addr).sa_family, raw)
         };
 
-        RecordEnum::BindRecord(BindRecord {
+        Some(RecordEnum::BindRecord(BindRecord {
             sockfd: self.sockfd,
             sa_family,
             sa_data,
             addrlen: self.addrlen,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -224,10 +243,11 @@ pub struct GetsockoptRecord {
     pub optlen: socklen_t,
 
     pub ret: libc::c_int,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for GetsockoptEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let optlen = if self.optlen.is_null() {
             0
         } else {
@@ -244,14 +264,15 @@ impl ToRecordEnum for GetsockoptEvent {
                 .to_vec()
         };
 
-        RecordEnum::GetsockoptRecord(GetsockoptRecord {
+        Some(RecordEnum::GetsockoptRecord(GetsockoptRecord {
             sockfd: self.sockfd,
             level: self.level,
             optname: self.optname,
             optval,
             optlen,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -269,10 +290,11 @@ pub struct SendtoRecord {
     pub addrlen: socklen_t,
 
     pub ret: isize,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for SendtoEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let buf = if self.buf.is_null() || self.len == 0 {
             Vec::new()
         } else {
@@ -295,7 +317,7 @@ impl ToRecordEnum for SendtoEvent {
             ((*self.dest_addr).sa_family, raw)
         };
 
-        RecordEnum::SendtoRecord(SendtoRecord {
+        Some(RecordEnum::SendtoRecord(SendtoRecord {
             sockfd: self.sockfd,
             buf,
             len: self.len,
@@ -304,7 +326,8 @@ impl ToRecordEnum for SendtoEvent {
             dest_addr,
             addrlen: self.addrlen,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -320,10 +343,11 @@ pub struct WritevRecord {
     pub iov: Vec<IovecRecord>,
     pub iovcnt: libc::c_int,
     pub ret: isize,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for WritevEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let iov = if self.iov.is_null() || self.iovcnt <= 0 {
             Vec::new()
         } else {
@@ -351,12 +375,13 @@ impl ToRecordEnum for WritevEvent {
                 .collect()
         };
 
-        RecordEnum::WritevRecord(WritevRecord {
+        Some(RecordEnum::WritevRecord(WritevRecord {
             fd: self.fd,
             iov,
             iovcnt: self.iovcnt,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -369,11 +394,12 @@ pub struct RecvfromRecord {
     pub src_addr: Vec<u8>,
     pub addrlen: socklen_t,
     pub ret: isize,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for RecvfromEvent {
     // safe as long as pointers are valid
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let buf = slice::from_raw_parts(
             self.buf as *const u8,
             self.ret as usize,
@@ -396,7 +422,7 @@ impl ToRecordEnum for RecvfromEvent {
                 .to_vec()
         };
 
-        RecordEnum::RecvfromRecord(RecvfromRecord {
+        Some(RecordEnum::RecvfromRecord(RecvfromRecord {
             sockfd: self.sockfd,
             buf,
             len: self.len,
@@ -404,7 +430,8 @@ impl ToRecordEnum for RecvfromEvent {
             src_addr,
             addrlen,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -413,15 +440,17 @@ pub struct ShutdownRecord {
     pub sockfd: libc::c_int,
     pub how: libc::c_int,
     pub ret: libc::c_int,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for ShutdownEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
-        RecordEnum::ShutdownRecord(ShutdownRecord {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        Some(RecordEnum::ShutdownRecord(ShutdownRecord {
             sockfd: self.sockfd,
             how: self.how,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -429,14 +458,16 @@ impl ToRecordEnum for ShutdownEvent {
 pub struct CloseRecord {
     pub fd: libc::c_int,
     pub ret: libc::c_int,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for CloseEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
-        RecordEnum::CloseRecord(CloseRecord {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        Some(RecordEnum::CloseRecord(CloseRecord {
             fd: self.fd,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -457,7 +488,7 @@ pub struct EpollWaitRecord {
 
 impl ToRecordEnum for EpollWaitEvent {
     // safe as long as events pointer is valid
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let events = if self.events.is_null() || self.ret <= 0 {
             Vec::new()
         } else {
@@ -470,13 +501,13 @@ impl ToRecordEnum for EpollWaitEvent {
                 .collect()
         };
 
-        RecordEnum::EpollWaitRecord(EpollWaitRecord {
+        Some(RecordEnum::EpollWaitRecord(EpollWaitRecord {
             epfd: self.epfd,
             events,
             maxevents: self.maxevents,
             timeout: self.timeout,
             ret: self.ret,
-        })
+        }))
     }
 }
 
@@ -487,11 +518,11 @@ pub struct EpollCreate1Record {
 }
 
 impl ToRecordEnum for EpollCreate1Event {
-    unsafe fn to_record(&self) -> RecordEnum {
-        RecordEnum::EpollCreate1Record(EpollCreate1Record {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        Some(RecordEnum::EpollCreate1Record(EpollCreate1Record {
             flags: self.flags,
             ret: self.ret,
-        })
+        }))
     }
 }
 
@@ -512,7 +543,7 @@ pub struct EpollCtlRecord {
 
 impl ToRecordEnum for EpollCtlEvent {
     // safe as long as event pointer is valid
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let event = if self.event.is_null() {
             None
         } else {
@@ -522,13 +553,13 @@ impl ToRecordEnum for EpollCtlEvent {
             })
         };
 
-        RecordEnum::EpollCtlRecord(EpollCtlRecord {
+        Some(RecordEnum::EpollCtlRecord(EpollCtlRecord {
             epfd: self.epfd,
             op: self.op,
             fd: self.fd,
             event,
             ret: self.ret,
-        })
+        }))
     }
 }
 
@@ -548,6 +579,7 @@ pub struct SendmsgRecord {
     pub msg: Option<MsgHdrRecord>,
     pub flags: libc::c_int,
     pub ret: isize,
+    pub errno: libc::c_int,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -556,6 +588,7 @@ pub struct RecvmsgRecord {
     pub msg: Option<MsgHdrRecord>,
     pub flags: libc::c_int,
     pub ret: isize,
+    pub errno: libc::c_int,
 }
 
 /// Helper to safely copy a raw msghdr pointer into an owned MsgHdrRecord
@@ -609,24 +642,26 @@ unsafe fn copy_msghdr(ptr: *const msghdr) -> Option<MsgHdrRecord> {
 }
 
 impl ToRecordEnum for SendmsgEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
-        RecordEnum::SendmsgRecord(SendmsgRecord {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        Some(RecordEnum::SendmsgRecord(SendmsgRecord {
             sockfd: self.sockfd,
             msg: copy_msghdr(self.msg),
             flags: self.flags,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
 impl ToRecordEnum for RecvmsgEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
-        RecordEnum::RecvmsgRecord(RecvmsgRecord {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        Some(RecordEnum::RecvmsgRecord(RecvmsgRecord {
             sockfd: self.sockfd,
             msg: copy_msghdr(self.msg),
             flags: self.flags,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -638,12 +673,12 @@ pub struct EventfdRecord {
 }
 
 impl ToRecordEnum for EventfdEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
-        RecordEnum::EventfdRecord(EventfdRecord {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        Some(RecordEnum::EventfdRecord(EventfdRecord {
             initval: self.initval,
             flags: self.flags,
             ret: self.ret,
-        })
+        }))
     }
 }
 
@@ -654,10 +689,11 @@ pub struct SocketpairRecord {
     pub protocol: libc::c_int,
     pub sv: Option<[libc::c_int; 2]>,
     pub ret: libc::c_int,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for SocketpairEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let sv = if self.sv.is_null() {
             None
         } else {
@@ -667,13 +703,14 @@ impl ToRecordEnum for SocketpairEvent {
             ])
         };
 
-        RecordEnum::SocketpairRecord(SocketpairRecord {
+        Some(RecordEnum::SocketpairRecord(SocketpairRecord {
             domain: self.domain,
             type_: self.type_,
             protocol: self.protocol,
             sv,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -683,10 +720,11 @@ pub struct WriteRecord {
     pub buf: Vec<u8>,
     pub count: usize,
     pub ret: isize,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for WriteEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let buf = if self.buf.is_null() || self.count == 0 {
             Vec::new()
         } else {
@@ -694,12 +732,13 @@ impl ToRecordEnum for WriteEvent {
                 .to_vec()
         };
 
-        RecordEnum::WriteRecord(WriteRecord {
+        Some(RecordEnum::WriteRecord(WriteRecord {
             fd: self.fd,
             buf,
             count: self.count,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -709,10 +748,11 @@ pub struct ReadRecord {
     pub buf: Vec<u8>,
     pub count: usize,
     pub ret: isize,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for ReadEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let buf = if self.buf.is_null() || self.ret <= 0 {
             Vec::new()
         } else {
@@ -720,12 +760,13 @@ impl ToRecordEnum for ReadEvent {
                 .to_vec()
         };
 
-        RecordEnum::ReadRecord(ReadRecord {
+        Some(RecordEnum::ReadRecord(ReadRecord {
             fd: self.fd,
             buf,
             count: self.count,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
     }
 }
 
@@ -735,10 +776,11 @@ pub struct ReadvRecord {
     pub iov: Vec<Vec<u8>>, // inlined iovec data
     pub iovcnt: libc::c_int,
     pub ret: isize,
+    pub errno: libc::c_int,
 }
 
 impl ToRecordEnum for ReadvEvent {
-    unsafe fn to_record(&self) -> RecordEnum {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
         let iov = if self.iov.is_null() || self.iovcnt <= 0 {
             Vec::new()
         } else {
@@ -758,11 +800,313 @@ impl ToRecordEnum for ReadvEvent {
                 .collect()
         };
 
-        RecordEnum::ReadvRecord(ReadvRecord {
+        Some(RecordEnum::ReadvRecord(ReadvRecord {
             fd: self.fd,
             iov,
             iovcnt: self.iovcnt,
             ret: self.ret,
-        })
+            errno: self.errno_,
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimevalRecord {
+    pub tv_sec: libc::c_long,
+    pub tv_usec: libc::c_long,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimespecRecord {
+    pub tv_sec: libc::c_long,
+    pub tv_nsec: libc::c_long,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GettimeofdayRecord {
+    pub tv: Option<TimevalRecord>,
+    pub ret: libc::c_int,
+}
+
+impl ToRecordEnum for GettimeofdayEvent {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        let tv = if self.tv.is_null() {
+            None
+        } else {
+            Some(TimevalRecord {
+                tv_sec: (*self.tv).tv_sec,
+                tv_usec: (*self.tv).tv_usec,
+            })
+        };
+
+        Some(RecordEnum::GettimeofdayRecord(GettimeofdayRecord {
+            tv,
+            ret: self.ret,
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClockGettimeRecord {
+    pub clockid: clockid_t,
+    pub tp: Option<TimespecRecord>,
+    pub ret: libc::c_int,
+}
+
+impl ToRecordEnum for ClockGettimeEvent {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        let tp = if self.tp.is_null() {
+            None
+        } else {
+            Some(TimespecRecord {
+                tv_sec: (*self.tp).tv_sec,
+                tv_nsec: (*self.tp).tv_nsec,
+            })
+        };
+
+        Some(RecordEnum::ClockGettimeRecord(ClockGettimeRecord {
+            clockid: self.clockid,
+            tp,
+            ret: self.ret,
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpenatRecord {
+    pub dirfd: libc::c_int,
+    pub path: Option<String>,
+    pub flags: libc::c_int,
+    pub mode: mode_t,
+    pub ret: libc::c_int,
+}
+
+impl ToRecordEnum for OpenatEvent {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        let path = if self.path.is_null() {
+            None
+        } else {
+            Some(
+                CStr::from_ptr(self.path)
+                    .to_string_lossy()
+                    .into_owned(),
+            )
+        };
+
+        Some(RecordEnum::OpenatRecord(OpenatRecord {
+            dirfd: self.dirfd,
+            path,
+            flags: self.flags,
+            mode: self.mode,
+            ret: self.ret,
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MmapRecord {
+    pub addr_contents: Option<Vec<u8>>,
+    pub length: usize,
+    pub prot: libc::c_int,
+    pub flags: libc::c_int,
+    pub fd: libc::c_int,
+    pub offset: off_t,
+    pub ret: isize,
+}
+
+impl ToRecordEnum for MmapEvent {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        let addr_contents = if self.addr.is_null() {
+            None
+        } else if self.length == 0 {
+            Some(Vec::new())
+        } else {
+            Some(
+                std::slice::from_raw_parts(
+                    self.addr.cast::<u8>(),
+                    self.length,
+                )
+                    .to_vec(),
+            )
+        };
+
+        Some(RecordEnum::MmapRecord(MmapRecord {
+            addr_contents,
+            length: self.length,
+            prot: self.prot,
+            flags: self.flags,
+            fd: self.fd,
+            offset: self.offset,
+            ret: self.ret as isize,
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecvRecord {
+    pub sockfd: libc::c_int,
+    pub buf: Vec<u8>,
+    pub len: usize,
+    pub flags: libc::c_int,
+    pub ret: isize,
+    pub errno: libc::c_int,
+}
+
+impl ToRecordEnum for RecvEvent {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        let buf = if self.buf.is_null() || self.ret <= 0 {
+            Vec::new()
+        } else {
+            slice::from_raw_parts(
+                self.buf as *const u8,
+                self.ret as usize,
+            )
+                .to_vec()
+        };
+
+        Some(RecordEnum::RecvRecord(RecvRecord {
+            sockfd: self.sockfd,
+            buf,
+            len: self.len,
+            flags: self.flags,
+            ret: self.ret,
+            errno: self.errno_,
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SendRecord {
+    pub sockfd: libc::c_int,
+    pub buf: Vec<u8>,
+    pub len: usize,
+    pub flags: libc::c_int,
+    pub ret: isize,
+    pub errno: libc::c_int,
+}
+
+impl ToRecordEnum for SendEvent {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        let buf = if self.buf.is_null() || self.len == 0 {
+            Vec::new()
+        } else {
+            slice::from_raw_parts(
+                self.buf as *const u8,
+                self.len,
+            )
+                .to_vec()
+        };
+
+        Some(RecordEnum::SendRecord(SendRecord {
+            sockfd: self.sockfd,
+            buf,
+            len: self.len,
+            flags: self.flags,
+            ret: self.ret,
+            errno: self.errno_,
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PpollRecord {
+    pub fds: Vec<Pollfd>,
+    pub tmo_p: Option<TimespecRecord>,
+    pub sigmask: Option<Vec<u8>>,
+    pub ret: libc::c_int,
+    pub errno: libc::c_int,
+}
+
+impl ToRecordEnum for PpollEvent {
+    // safe as long as the ppoll arguments are valid
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        let fds_vec: Vec<Pollfd> = if self.fds.is_null() || self.nfds == 0 {
+            Vec::new()
+        } else {
+            (0..self.nfds)
+                .map(|i| unsafe { *self.fds.add(i as usize) })
+                .map(Pollfd::from_libc_pollfd)
+                .collect()
+        };
+
+        let tmo_p = if self.tmo_p.is_null() {
+            None
+        } else {
+            Some(TimespecRecord {
+                tv_sec: unsafe { (*self.tmo_p).tv_sec },
+                tv_nsec: unsafe { (*self.tmo_p).tv_nsec },
+            })
+        };
+
+        let sigmask = if self.sigmask.is_null() {
+            None
+        } else {
+            Some(
+                unsafe {
+                    slice::from_raw_parts(
+                        self.sigmask as *const u8,
+                        std::mem::size_of::<libc::sigset_t>(),
+                    )
+                }
+                    .to_vec(),
+            )
+        };
+
+        Some(RecordEnum::PpollRecord(PpollRecord {
+            fds: fds_vec,
+            tmo_p,
+            sigmask,
+            ret: self.ret,
+            errno: self.errno_,
+        }))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyscallGetrandomRecord {
+    pub buf: Vec<u8>,
+    pub buflen: usize,
+    pub flags: libc::c_uint,
+    pub ret: libc::c_long,
+    pub errno: libc::c_int,
+}
+
+impl ToRecordEnum for SyscallEvent {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        match self.number {
+            libc::SYS_getrandom => {
+                let buf_ptr = self.args[0] as usize as *const u8;
+                let buflen = self.args[1] as usize;
+                let flags = self.args[2] as libc::c_uint;
+
+                let buf = if buf_ptr.is_null() || self.ret <= 0 {
+                    Vec::new()
+                } else {
+                    slice::from_raw_parts(buf_ptr, self.ret as usize).to_vec()
+                };
+
+                Some(RecordEnum::SyscallGetrandomRecord(SyscallGetrandomRecord {
+                    buf,
+                    buflen,
+                    flags,
+                    ret: self.ret,
+                    errno: self.errno_,
+                }))
+            }
+            _ => None
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TimeRecord {
+    pub ret: time_t,
+}
+
+impl ToRecordEnum for TimeEvent {
+    unsafe fn to_record(&self) -> Option<RecordEnum> {
+        Some(RecordEnum::TimeRecord(TimeRecord {
+            ret: self.ret,
+        }))
     }
 }

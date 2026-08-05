@@ -1,15 +1,18 @@
 use dice_rs::{
-    Chain, DiceResult, DiceThreadId, events::*, init_dice_state,
+    Chain, DiceResult, DiceThreadId, events::*,
     subscribe, thread::*, tls_key,
 };
+use lazy_static::lazy_static;
 use serde_json::Result;
 use std::{
     fs::File,
 };
 use std::collections::LinkedList;
+use std::error::Error;
 use std::io::BufWriter;
 use std::io::Write;
-use craps_record::{RecordEnum, ToRecordEnum};
+use std::sync::{LazyLock, Mutex};
+use craps_record::{OpenatRecord, RecordEnum, ToRecordEnum};
 
 #[derive(Debug, Default)]
 struct Trace {
@@ -19,33 +22,47 @@ struct Trace {
     writer: Option<BufWriter<File>>,
 }
 
-init_dice_state!();
-
 tls_key!(TRACE: Trace);
 
 const CRAPS_PRIORITY: i32 = match i32::from_str_radix(env!("CRAPS_PRIORITY", "CRAPS_PRIORITY must be set"), 10) {
     Ok(val) => val,
     Err(_) => panic!("Failed to parse CRAPS_PRIORITY as i32")
 };
+
+lazy_static! {
+    static ref ENABLED: bool = {
+        match std::env::var("RUNTIME_MODE").as_deref() {
+            Ok("RECORD") => true,
+            Ok("REPLAY") => false,
+            _ => panic!("RUNTIME_MODE must be either RECORD or REPLAY"),
+        }
+    };
+}
+
 const TRACE_THRESHOLD: usize = 1;
+
+static RETIRED_FILES: LazyLock<Mutex<Vec<File>>> = LazyLock::new(|| Mutex::new(Vec::new()));
 
 impl Trace {
     pub fn initialize(&mut self, thread_id: DiceThreadId) {
-        if self.initd {
+        if self.initd || !*ENABLED {
             return;
         }
         self.initd = true;
         self.thread_id = Some(thread_id);
 
-        self.writer = Some(BufWriter::new(File::create(format!("records/craps_{thread_id}.txt")).unwrap()));
-        println!("initialized craps trace for thread {}", thread_id);
+        self.writer = Some(BufWriter::new(File::create(format!("records/craps_{thread_id}.txt")).expect("file creation should succeed")));
     }
 
-    pub fn end(&mut self) -> Result<()> {
+    pub fn end(&mut self) -> std::result::Result<(), Box<dyn Error>> {
         self.dump_events()?;
         self.writer
             .as_mut()
             .map(|file| file.flush().expect("should be able to flush file"));
+        RETIRED_FILES
+            .lock()
+            .expect("mutex must not be poisoned")
+            .push(self.writer.take().expect("trace writer should be initialized by init and end is only called once").into_inner().expect("file must be opened before end"));
         self.writer = None;
         Ok(())
     }
@@ -56,15 +73,17 @@ impl Trace {
         }
         // assert!(self.initd);
         // safe as long as all implementations of to_record are safe
-        let record = unsafe { event.to_record() };
-        self.records.push_back(record);
-        //println!("[{}] {} {}", self.thread_id.unwrap(), record.global_index, record.event);
-        if self.records.len() == TRACE_THRESHOLD {
-            self.dump_events().unwrap()
+        if let Some(record) = unsafe { event.to_record() } {
+            self.records.push_back(record);
+
+            if self.records.len() >= TRACE_THRESHOLD {
+                self.dump_events()
+                    .expect("event dump should succeed");
+            }
         }
     }
 
-    fn dump_events(&mut self) -> Result<()> {
+    fn dump_events(&mut self) -> std::result::Result<(), Box<dyn Error>> {
         if !self.initd {
             return Ok(());
         }
@@ -76,6 +95,7 @@ impl Trace {
                     while let Some(record) = self.records.pop_front() {
                         serde_json::to_writer(&mut *writer, &record)?;
                     }
+                    writer.flush()?;
                 }
             }
         }
@@ -84,6 +104,9 @@ impl Trace {
 }
 
 subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfInitEvent>, meta| {
+    if !*ENABLED {
+        return DiceResult::Ok
+    }
     let thread_id = self_id(meta);
     TRACE.with(meta, |trace| {
         trace.initialize(thread_id);
@@ -93,8 +116,11 @@ subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfInitEve
 });
 
 subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfFiniEvent>, meta| {
+    if !*ENABLED {
+        return DiceResult::Ok
+    }
     TRACE.with(meta, |trace| {
-        trace.end().unwrap();
+        trace.end().expect("trace finalization should succeed");
     });
     DiceResult::Ok
 });
@@ -106,8 +132,11 @@ macro_rules! define_simple_handlers {
                   Chain::CaptureAfter,
                   CRAPS_PRIORITY,
                   |event: Option<&mut $event>, meta| {
+                          if !*ENABLED {
+                              return DiceResult::Ok
+                          }
                           TRACE.with(meta, |trace| {
-                              trace.record_event(event.unwrap())
+                              trace.record_event(event.expect("event should be available"))
                           });
                           DiceResult::Ok
                   }
@@ -118,20 +147,19 @@ macro_rules! define_simple_handlers {
 
 define_simple_handlers!(
     GetrandomEvent,
-    GetrandomEvent,
-    EpollCreate1Event,
-    EpollCtlEvent,
+    //EpollCreate1Event,
+    //EpollCtlEvent,
     EpollWaitEvent,
     PollEvent,
-    EventfdEvent,
-    SocketEvent,
-    SocketpairEvent,
-    GetsockoptEvent,
-    SetsockoptEvent,
-    BindEvent,
-    ConnectEvent,
-    ShutdownEvent,
-    CloseEvent,
+    //EventfdEvent,
+    //SocketEvent,
+    //SocketpairEvent,
+    //GetsockoptEvent,
+    //SetsockoptEvent,
+    //BindEvent,
+    //ConnectEvent,
+    //ShutdownEvent,
+    //CloseEvent,
     ReadEvent,
     WriteEvent,
     ReadvEvent,
@@ -140,7 +168,16 @@ define_simple_handlers!(
     SendmsgEvent,
     RecvfromEvent,
     SendtoEvent,
+    ClockGettimeEvent,
+    GettimeofdayEvent,
+    //OpenatEvent,
+    //MmapEvent,
+    RecvEvent,
+    SendEvent,
+    PpollEvent,
+    SyscallEvent,
+    TimeEvent,
 );
 
-pub fn use_craps() {
+pub fn use_craps_recorder() {
 }
