@@ -8,12 +8,7 @@ use serde_json::Result;
 use serde_json::de::IoRead;
 use serde_json::Deserializer;
 use serde_json::StreamDeserializer;
-use std::{
-    iter::Peekable,
-    mem,
-    fs::File,
-    ptr,
-};
+use std::{iter::Peekable, mem, fs::File, ptr, thread};
 use std::collections::LinkedList;
 use std::sync::{LazyLock, Mutex};
 use craps_record::{RecordEnum, ToRecordEnum};
@@ -90,7 +85,9 @@ impl Replayer<'static> {
         match maybe_record {
             None => {
                 println!("craps replay: {:?} ran out of records", self.thread_id);
-                loop {}
+                loop {
+                    thread::park();
+                }
             }
             Some(record) => record.expect("the record should be deserialized")
         }
@@ -183,7 +180,7 @@ macro_rules! define_after_replay_handler {
                 return DiceResult::Ok
             }
             REPLAYER.with(meta, |replayer| {
-                println!("craps replay: {:?}:{}", replayer.thread_id, stringify!($record_variant));
+                //println!("craps replay: {:?}:{}", replayer.thread_id, stringify!($record_variant));
                 match replayer.dequeue_record() {
                     RecordEnum::$record_variant($record) => $body,
                     other => {
