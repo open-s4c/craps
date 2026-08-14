@@ -1,15 +1,15 @@
 [package]
-name = "craps-recorder"
+name = "craps"
 version = "0.1.0"
 edition = "2024"
 license = "0bsd"
 
 [lib]
-name = "craps_recorder"
+name = "craps"
 crate-type = ["staticlib", "rlib"]
 
 [features]
-default = []
+default = ["abomonation"]
 
 interpose-memcpy = []
 lto = ["dice-rs/lto"]
@@ -44,12 +44,33 @@ dice-time = ["dice-rs/dice-time"]
 dice-uio = ["dice-rs/dice-uio"]
 dice-unistd = ["dice-rs/dice-unistd"]
 
+# serialization
+
+serde-json = [
+    "dep:serde",
+    "dep:serde_json",
+]
+
+abomonation = [
+    "dep:abomonation",
+    "dep:abomonation_derive",
+    "dep:memmap2",
+]
+
+rkyv = [
+    "dep:rkyv",
+    "dep:memmap2",
+]
+
 [dependencies]
-craps-record = { version = "0.1", path = "../craps-record" }
 dice-rs = { workspace = true }
 ctor = { workspace = true }
 log = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 libc = { workspace = true }
 lazy_static = { workspace = true }
+abomonation = { workspace = true, optional = true }
+abomonation_derive = { workspace = true, optional = true }
+rkyv = { workspace = true, optional = true }
+memmap2 = { workspace = true, optional = true }

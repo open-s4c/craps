@@ -1,24 +1,17 @@
 use dice_rs::{
-    Chain, DiceResult, DiceThreadId, events::*,
+    Chain, DiceResult, events::*,
     subscribe, thread::*, tls_key,
 };
 use libc::c_void;
 use lazy_static::lazy_static;
-use serde_json::Result;
-use serde_json::de::IoRead;
-use serde_json::Deserializer;
-use serde_json::StreamDeserializer;
-use std::{iter::Peekable, mem, fs::File, ptr, thread};
-use std::collections::LinkedList;
-use std::sync::{LazyLock, Mutex};
-use craps_record::{RecordEnum, ToRecordEnum};
+use std::{mem, ptr};
+use crate::record::{ReplayRecord, ToRecordEnum};
+use crate::replayer::*;
 
 const CRAPS_PRIORITY: i32 = match i32::from_str_radix(env!("CRAPS_PRIORITY", "CRAPS_PRIORITY must be set"), 10) {
     Ok(val) => val,
     Err(_) => panic!("Failed to parse CRAPS_PRIORITY as i32")
 };
-
-static RETIRED_RECORD_ITERS: LazyLock<Mutex<Vec<Peekable<StreamDeserializer<'static, IoRead<File>, RecordEnum>>>>> = LazyLock::new(|| Mutex::new(Vec::new()));
 
 lazy_static! {
     static ref ENABLED: bool = {
@@ -33,15 +26,6 @@ lazy_static! {
 pub extern "C" fn return_zero() -> i32 {
     0
 }
-
-#[derive(Default)]
-struct Replayer<'a> {
-    initd: bool,
-    thread_id: Option<DiceThreadId>,
-    records_iter: Option<Peekable<StreamDeserializer<'a, IoRead<File>, RecordEnum>>>,
-}
-
-tls_key!(REPLAYER: Replayer);
 
 pub trait SetFunc<T> {
     fn set_func(&mut self, func: *const c_void);
@@ -59,48 +43,13 @@ macro_rules! define_set_func {
     };
 }
 
-impl Replayer<'static> {
-    pub fn initialize(&mut self, thread_id: DiceThreadId) {
-        if self.initd || !*ENABLED {
-            return;
-        }
-        self.initd = true;
-        self.thread_id = Some(thread_id);
-
-        let file = File::open(format!("records/craps_{thread_id}.txt")).expect("should be able to open the file");
-        self.records_iter = Some(Deserializer::from_reader(file).into_iter::<RecordEnum>().peekable());
-    }
-
-    pub fn end(&mut self) -> Result<()> {
-        if self.records_iter.as_mut().expect("records iterator should be available").peek().is_some() {
-            panic!("finish before finishing replay!")
-        }
-        RETIRED_RECORD_ITERS.lock().unwrap().push(self.records_iter.take().unwrap());
-        self.records_iter = None;
-        Ok(())
-    }
-
-    pub fn dequeue_record(&mut self) -> RecordEnum {
-        let maybe_record = self.records_iter.as_mut().expect("the records iterator should be available").next();
-        match maybe_record {
-            None => {
-                println!("craps replay: {:?} ran out of records", self.thread_id);
-                loop {
-                    thread::park();
-                }
-            }
-            Some(record) => record.expect("the record should be deserialized")
-        }
-    }
-}
-
 subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfInitEvent>, meta| {
     if !*ENABLED {
         return DiceResult::Ok
     }
     let thread_id = self_id(meta);
 
-    REPLAYER.with(meta, |trace| {
+    with_replayer(meta, |trace| {
         trace.initialize(thread_id);
     });
 
@@ -112,7 +61,7 @@ subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfFiniEve
         return DiceResult::Ok
     }
     let thread_id = self_id(meta);
-    REPLAYER.with(meta, |replayer| {
+    with_replayer(meta, |replayer| {
         replayer.end().expect("replayer finalization should succeed");
     });
     DiceResult::Ok
@@ -129,7 +78,7 @@ macro_rules! define_simple_before_handlers {
                           if !*ENABLED {
                               return DiceResult::Ok
                           }
-                          REPLAYER.with(meta, |replayer| {
+                          with_replayer(meta, |replayer| {
                               let event = event.expect("event should be present");
                               event.set_func(return_zero as *const c_void);
                           });
@@ -179,20 +128,15 @@ macro_rules! define_after_replay_handler {
             if unsafe { $event.to_record() }.is_none() {
                 return DiceResult::Ok
             }
-            REPLAYER.with(meta, |replayer| {
+            with_replayer(meta, |replayer| {
                 //println!("craps replay: {:?}:{}", replayer.thread_id, stringify!($record_variant));
                 match replayer.dequeue_record() {
-                    RecordEnum::$record_variant($record) => $body,
-                    other => {
-                        let got = serde_json::to_value(&other)
-                            .ok()
-                            .expect("should be able to serialize the record");
-                        panic!(
-                            "replay mismatch: expected {}, got {}",
+                    ReplayRecord::$record_variant($record) => $body,
+                    other => panic!(
+                            "replay mismatch: expected {}, got {:?}",
                             stringify!($record_variant),
-                            got
-                        );
-                    }
+                            other
+                    ),
                 }
             });
             DiceResult::Ok
@@ -227,7 +171,7 @@ define_ret_only_handler!(SendmsgEvent, SendmsgRecord);
 define_after_replay_handler!(PollEvent, PollRecord, |event, record| {
         event.ret = record.ret;
         if record.ret > 0 {
-            record.fds.into_iter()
+            record.fds.iter()
                 .enumerate()
                 .for_each(|index_and_fd| unsafe { (*event.fds.add(index_and_fd.0 as usize)).revents = index_and_fd.1.revents });
         }
@@ -446,7 +390,7 @@ define_after_replay_handler!(PpollEvent, PpollRecord, |event, record| {
 
     if record.ret > 0 && !event.fds.is_null() {
         record.fds
-            .into_iter()
+            .iter()
             .enumerate()
             .for_each(|index_and_fd| unsafe {
                 (*event.fds.add(index_and_fd.0)).revents =
@@ -496,6 +440,3 @@ define_after_replay_handler!(TimeEvent, TimeRecord, |event, record| {
         }
     }
 });
-
-pub fn use_craps_replayer() {
-}

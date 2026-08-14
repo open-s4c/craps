@@ -1,6 +1,6 @@
 [workspace]
 resolver="3"
-members = ["craps-record", "craps-recorder", "craps-replayer"]
+members = ["craps"]
 
 [workspace.dependencies]
 dice-rs = { path = "dice-rs/dice-rs", version = "0.1" }

@@ -1,58 +1,115 @@
 use dice_rs::events::*;
-use serde::{Serialize, Deserialize};
 use std::ffi::CStr;
 use std::fmt::Debug;
 use std::slice;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum RecordEnum {
-    /// randomness
-    GetrandomRecord(GetrandomRecord),
-    SyscallGetrandomRecord(SyscallGetrandomRecord),
-    /// polling
-    EpollCreate1Record(EpollCreate1Record),
-    EpollCtlRecord(EpollCtlRecord),
-    EpollWaitRecord(EpollWaitRecord),
-    PollRecord(PollRecord),
-    EventfdRecord(EventfdRecord),
-    PpollRecord(PpollRecord),
-    /// socket management
-    SocketRecord(SocketRecord),
-    SocketpairRecord(SocketpairRecord),
-    GetsockoptRecord(GetsockoptRecord),
-    SetsockoptRecord(SetsockoptRecord),
-    BindRecord(BindRecord),
-    ConnectRecord(ConnectRecord),
-    ShutdownRecord(ShutdownRecord),
-    CloseRecord(CloseRecord),
-    /// reading/writing
-    ReadRecord(ReadRecord),
-    WriteRecord(WriteRecord),
-    ReadvRecord(ReadvRecord),
-    WritevRecord(WritevRecord),
-    RecvmsgRecord(RecvmsgRecord),
-    SendmsgRecord(SendmsgRecord),
-    RecvfromRecord(RecvfromRecord),
-    SendtoRecord(SendtoRecord),
-    OpenatRecord(OpenatRecord),
-    MmapRecord(MmapRecord),
-    RecvRecord(RecvRecord),
-    SendRecord(SendRecord),
-    /// time
-    GettimeofdayRecord(GettimeofdayRecord),
-    ClockGettimeRecord(ClockGettimeRecord),
-    TimeRecord(TimeRecord),
+#[cfg(not(any(
+    feature = "serde-json",
+    feature = "abomonation",
+    feature = "rkyv",
+)))]
+compile_error!(
+    "one serialization feature must be enabled: \
+     `serde-json`, `abomonation`, or `rkyv`"
+);
+
+#[cfg(any(
+    all(feature = "serde-json", feature = "abomonation"),
+    all(feature = "serde-json", feature = "rkyv"),
+    all(feature = "abomonation", feature = "rkyv"),
+))]
+compile_error!(
+    "serialization features are mutually exclusive: \
+     enable only one of `serde-json`, `abomonation`, or `rkyv`"
+);
+
+#[cfg(feature = "rkyv")]
+pub(crate) use ArchivedRecordEnum as ReplayRecord;
+
+#[cfg(any(
+    feature = "serde-json",
+    feature = "abomonation",
+))]
+pub(crate) use RecordEnum as ReplayRecord;
+
+macro_rules! record_type {
+    ($item:item) => {
+        #[derive(Debug, Clone)]
+        #[cfg_attr(
+            feature = "serde-json",
+            derive(serde::Serialize, serde::Deserialize)
+        )]
+        #[cfg_attr(
+            feature = "abomonation",
+            derive(abomonation_derive::Abomonation)
+        )]
+        #[cfg_attr(
+            feature = "rkyv",
+            derive(
+                rkyv::Archive,
+                rkyv::Serialize,
+                rkyv::Deserialize
+            )
+        )]
+        #[cfg_attr(
+            feature = "rkyv",
+            rkyv(derive(Debug))
+        )]
+        $item
+    };
+}
+
+record_type! {
+    pub enum RecordEnum {
+        /// randomness
+        GetrandomRecord(GetrandomRecord),
+        SyscallGetrandomRecord(SyscallGetrandomRecord),
+        /// polling
+        EpollCreate1Record(EpollCreate1Record),
+        EpollCtlRecord(EpollCtlRecord),
+        EpollWaitRecord(EpollWaitRecord),
+        PollRecord(PollRecord),
+        EventfdRecord(EventfdRecord),
+        PpollRecord(PpollRecord),
+        /// socket management
+        SocketRecord(SocketRecord),
+        SocketpairRecord(SocketpairRecord),
+        GetsockoptRecord(GetsockoptRecord),
+        SetsockoptRecord(SetsockoptRecord),
+        BindRecord(BindRecord),
+        ConnectRecord(ConnectRecord),
+        ShutdownRecord(ShutdownRecord),
+        CloseRecord(CloseRecord),
+        /// reading/writing
+        ReadRecord(ReadRecord),
+        WriteRecord(WriteRecord),
+        ReadvRecord(ReadvRecord),
+        WritevRecord(WritevRecord),
+        RecvmsgRecord(RecvmsgRecord),
+        SendmsgRecord(SendmsgRecord),
+        RecvfromRecord(RecvfromRecord),
+        SendtoRecord(SendtoRecord),
+        OpenatRecord(OpenatRecord),
+        MmapRecord(MmapRecord),
+        RecvRecord(RecvRecord),
+        SendRecord(SendRecord),
+        /// time
+        GettimeofdayRecord(GettimeofdayRecord),
+        ClockGettimeRecord(ClockGettimeRecord),
+        TimeRecord(TimeRecord),
+    }
 }
 
 pub trait ToRecordEnum {
     unsafe fn to_record(&self) -> Option<RecordEnum>;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Pollfd {
-    pub fd: libc::c_int,
-    pub events: libc::c_short,
-    pub revents: libc::c_short,
+record_type! {
+    pub struct Pollfd {
+        pub fd: libc::c_int,
+        pub events: libc::c_short,
+        pub revents: libc::c_short,
+    }
 }
 
 impl Pollfd {
@@ -65,11 +122,12 @@ impl Pollfd {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PollRecord {
-    pub fds: Vec<Pollfd>,
-    pub timeout: libc::c_int,
-    pub ret: libc::c_int,
+record_type! {
+    pub struct PollRecord {
+        pub fds: Vec<Pollfd>,
+        pub timeout: libc::c_int,
+        pub ret: libc::c_int,
+    }
 }
 
 impl ToRecordEnum for PollEvent {
@@ -88,12 +146,13 @@ impl ToRecordEnum for PollEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetrandomRecord {
-    pub buf: Vec<u8>,
-    pub size: usize,
-    pub flags: libc::c_uint,
-    pub ret: isize,
+record_type! {
+    pub struct GetrandomRecord {
+        pub buf: Vec<u8>,
+        pub size: usize,
+        pub flags: libc::c_uint,
+        pub ret: isize,
+    }
 }
 
 impl ToRecordEnum for GetrandomEvent {
@@ -109,14 +168,14 @@ impl ToRecordEnum for GetrandomEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct SocketRecord {
     pub domain: libc::c_int,
     pub type_: libc::c_int,
     pub protocol: libc::c_int,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for SocketEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -130,14 +189,14 @@ impl ToRecordEnum for SocketEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct ConnectRecord {
     pub sockfd: libc::c_int,
     pub addr: Vec<u8>,       // stores the bytes of the sockaddr
     pub addrlen: socklen_t,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for ConnectEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -158,7 +217,7 @@ impl ToRecordEnum for ConnectEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct SetsockoptRecord {
     pub sockfd: libc::c_int,
     pub level: libc::c_int,
@@ -167,7 +226,7 @@ pub struct SetsockoptRecord {
     pub optlen: socklen_t,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for SetsockoptEvent {
     // safe as long as optval is valid for optlen bytes
@@ -194,7 +253,7 @@ impl ToRecordEnum for SetsockoptEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct BindRecord {
     pub sockfd: libc::c_int,
 
@@ -204,7 +263,7 @@ pub struct BindRecord {
     pub addrlen: socklen_t,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for BindEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -233,7 +292,7 @@ impl ToRecordEnum for BindEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct GetsockoptRecord {
     pub sockfd: libc::c_int,
     pub level: libc::c_int,
@@ -244,7 +303,7 @@ pub struct GetsockoptRecord {
 
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for GetsockoptEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -276,7 +335,7 @@ impl ToRecordEnum for GetsockoptEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct SendtoRecord {
     pub sockfd: libc::c_int,
 
@@ -291,7 +350,7 @@ pub struct SendtoRecord {
 
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for SendtoEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -331,20 +390,20 @@ impl ToRecordEnum for SendtoEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct IovecRecord {
     pub data: Vec<u8>,
     pub len: usize,
-}
+}}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct WritevRecord {
     pub fd: libc::c_int,
     pub iov: Vec<IovecRecord>,
     pub iovcnt: libc::c_int,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for WritevEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -385,7 +444,7 @@ impl ToRecordEnum for WritevEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct RecvfromRecord {
     pub sockfd: libc::c_int,
     pub buf: Vec<u8>,
@@ -395,7 +454,7 @@ pub struct RecvfromRecord {
     pub addrlen: socklen_t,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for RecvfromEvent {
     // safe as long as pointers are valid
@@ -435,13 +494,13 @@ impl ToRecordEnum for RecvfromEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct ShutdownRecord {
     pub sockfd: libc::c_int,
     pub how: libc::c_int,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for ShutdownEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -454,12 +513,12 @@ impl ToRecordEnum for ShutdownEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct CloseRecord {
     pub fd: libc::c_int,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for CloseEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -471,20 +530,20 @@ impl ToRecordEnum for CloseEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct EpollEventRecord {
     pub events: u32,
     pub data: u64,
-}
+}}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct EpollWaitRecord {
     pub epfd: libc::c_int,
     pub events: Vec<EpollEventRecord>,
     pub maxevents: libc::c_int,
     pub timeout: libc::c_int,
     pub ret: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for EpollWaitEvent {
     // safe as long as events pointer is valid
@@ -511,11 +570,11 @@ impl ToRecordEnum for EpollWaitEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct EpollCreate1Record {
     pub flags: libc::c_int,
     pub ret: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for EpollCreate1Event {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -526,20 +585,20 @@ impl ToRecordEnum for EpollCreate1Event {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct EpollCtlEventRecord {
     pub events: u32,
     pub data: u64,
-}
+}}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct EpollCtlRecord {
     pub epfd: libc::c_int,
     pub op: libc::c_int,
     pub fd: libc::c_int,
     pub event: Option<EpollCtlEventRecord>,
     pub ret: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for EpollCtlEvent {
     // safe as long as event pointer is valid
@@ -563,7 +622,7 @@ impl ToRecordEnum for EpollCtlEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct MsgHdrRecord {
     pub name: Vec<u8>,
     pub namelen: libc::socklen_t,
@@ -571,25 +630,25 @@ pub struct MsgHdrRecord {
     pub control: Vec<u8>,
     pub controllen: usize,
     pub flags: libc::c_int,
-}
+}}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct SendmsgRecord {
     pub sockfd: libc::c_int,
     pub msg: Option<MsgHdrRecord>,
     pub flags: libc::c_int,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct RecvmsgRecord {
     pub sockfd: libc::c_int,
     pub msg: Option<MsgHdrRecord>,
     pub flags: libc::c_int,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 /// Helper to safely copy a raw msghdr pointer into an owned MsgHdrRecord
 unsafe fn copy_msghdr(ptr: *const msghdr) -> Option<MsgHdrRecord> {
@@ -665,12 +724,12 @@ impl ToRecordEnum for RecvmsgEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct EventfdRecord {
     pub initval: libc::c_uint,
     pub flags: libc::c_int,
     pub ret: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for EventfdEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -682,7 +741,7 @@ impl ToRecordEnum for EventfdEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct SocketpairRecord {
     pub domain: libc::c_int,
     pub type_: libc::c_int,
@@ -690,7 +749,7 @@ pub struct SocketpairRecord {
     pub sv: Option<[libc::c_int; 2]>,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for SocketpairEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -714,14 +773,14 @@ impl ToRecordEnum for SocketpairEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct WriteRecord {
     pub fd: libc::c_int,
     pub buf: Vec<u8>,
     pub count: usize,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for WriteEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -742,14 +801,14 @@ impl ToRecordEnum for WriteEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct ReadRecord {
     pub fd: libc::c_int,
     pub buf: Vec<u8>,
     pub count: usize,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for ReadEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -770,14 +829,14 @@ impl ToRecordEnum for ReadEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct ReadvRecord {
     pub fd: libc::c_int,
     pub iov: Vec<Vec<u8>>, // inlined iovec data
     pub iovcnt: libc::c_int,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for ReadvEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -810,23 +869,23 @@ impl ToRecordEnum for ReadvEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct TimevalRecord {
     pub tv_sec: libc::c_long,
     pub tv_usec: libc::c_long,
-}
+}}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct TimespecRecord {
     pub tv_sec: libc::c_long,
     pub tv_nsec: libc::c_long,
-}
+}}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct GettimeofdayRecord {
     pub tv: Option<TimevalRecord>,
     pub ret: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for GettimeofdayEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -846,12 +905,12 @@ impl ToRecordEnum for GettimeofdayEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct ClockGettimeRecord {
     pub clockid: clockid_t,
     pub tp: Option<TimespecRecord>,
     pub ret: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for ClockGettimeEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -872,14 +931,14 @@ impl ToRecordEnum for ClockGettimeEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct OpenatRecord {
     pub dirfd: libc::c_int,
     pub path: Option<String>,
     pub flags: libc::c_int,
     pub mode: mode_t,
     pub ret: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for OpenatEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -903,7 +962,7 @@ impl ToRecordEnum for OpenatEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct MmapRecord {
     pub addr_contents: Option<Vec<u8>>,
     pub length: usize,
@@ -912,7 +971,7 @@ pub struct MmapRecord {
     pub fd: libc::c_int,
     pub offset: off_t,
     pub ret: isize,
-}
+}}
 
 impl ToRecordEnum for MmapEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -942,7 +1001,7 @@ impl ToRecordEnum for MmapEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct RecvRecord {
     pub sockfd: libc::c_int,
     pub buf: Vec<u8>,
@@ -950,7 +1009,7 @@ pub struct RecvRecord {
     pub flags: libc::c_int,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for RecvEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -975,7 +1034,7 @@ impl ToRecordEnum for RecvEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct SendRecord {
     pub sockfd: libc::c_int,
     pub buf: Vec<u8>,
@@ -983,7 +1042,7 @@ pub struct SendRecord {
     pub flags: libc::c_int,
     pub ret: isize,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for SendEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -1008,14 +1067,14 @@ impl ToRecordEnum for SendEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct PpollRecord {
     pub fds: Vec<Pollfd>,
     pub tmo_p: Option<TimespecRecord>,
     pub sigmask: Option<Vec<u8>>,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for PpollEvent {
     // safe as long as the ppoll arguments are valid
@@ -1062,14 +1121,14 @@ impl ToRecordEnum for PpollEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct SyscallGetrandomRecord {
     pub buf: Vec<u8>,
     pub buflen: usize,
     pub flags: libc::c_uint,
     pub ret: libc::c_long,
     pub errno: libc::c_int,
-}
+}}
 
 impl ToRecordEnum for SyscallEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
@@ -1098,10 +1157,10 @@ impl ToRecordEnum for SyscallEvent {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+record_type! {
 pub struct TimeRecord {
     pub ret: time_t,
-}
+}}
 
 impl ToRecordEnum for TimeEvent {
     unsafe fn to_record(&self) -> Option<RecordEnum> {
