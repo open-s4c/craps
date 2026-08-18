@@ -1,9 +1,9 @@
 use dice_rs::{
-    Chain, DiceResult, DiceThreadId, events::*,
-    subscribe, thread::*, tls_key,
+    Chain, DiceResult, events::*,
+    subscribe, thread::*,
 };
 use lazy_static::lazy_static;
-use crate::recorder::*;
+use super::recorder::*;
 
 const CRAPS_PRIORITY: i32 = match i32::from_str_radix(env!("CRAPS_PRIORITY", "CRAPS_PRIORITY must be set"), 10) {
     Ok(val) => val,
@@ -20,10 +20,7 @@ lazy_static! {
     };
 }
 
-subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfInitEvent>, meta| {
-    if !*ENABLED {
-        return DiceResult::Ok
-    }
+subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, *ENABLED, |_event: Option<&mut SelfInitEvent>, meta| {
     let thread_id = self_id(meta);
     with_recorder(meta, |trace| {
         trace.initialize(thread_id);
@@ -32,10 +29,7 @@ subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfInitEve
     DiceResult::Ok
 });
 
-subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfFiniEvent>, meta| {
-    if !*ENABLED {
-        return DiceResult::Ok
-    }
+subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, *ENABLED, |_event: Option<&mut SelfFiniEvent>, meta| {
     with_recorder(meta, |trace| {
         trace.end().expect("trace finalization should succeed");
     });
@@ -48,10 +42,8 @@ macro_rules! define_simple_handlers {
               subscribe!(
                   Chain::CaptureAfter,
                   CRAPS_PRIORITY,
+                  *ENABLED,
                   |event: Option<&mut $event>, meta| {
-                          if !*ENABLED {
-                              return DiceResult::Ok
-                          }
                           with_recorder(meta, |trace| {
                               trace.record_event(event.expect("event should be available"))
                           });

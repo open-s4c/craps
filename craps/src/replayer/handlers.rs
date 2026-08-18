@@ -1,12 +1,12 @@
 use dice_rs::{
     Chain, DiceResult, events::*,
-    subscribe, thread::*, tls_key,
+    subscribe, thread::*,
 };
 use libc::c_void;
 use lazy_static::lazy_static;
 use std::{mem, ptr};
 use crate::record::{ReplayRecord, ToRecordEnum};
-use crate::replayer::*;
+use super::replayer::*;
 
 const CRAPS_PRIORITY: i32 = match i32::from_str_radix(env!("CRAPS_PRIORITY", "CRAPS_PRIORITY must be set"), 10) {
     Ok(val) => val,
@@ -43,10 +43,7 @@ macro_rules! define_set_func {
     };
 }
 
-subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfInitEvent>, meta| {
-    if !*ENABLED {
-        return DiceResult::Ok
-    }
+subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, *ENABLED, |_event: Option<&mut SelfInitEvent>, meta| {
     let thread_id = self_id(meta);
 
     with_replayer(meta, |trace| {
@@ -56,10 +53,7 @@ subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfInitEve
     DiceResult::Ok
 });
 
-subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, |_event: Option<&mut SelfFiniEvent>, meta| {
-    if !*ENABLED {
-        return DiceResult::Ok
-    }
+subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, *ENABLED, |_event: Option<&mut SelfFiniEvent>, meta| {
     let thread_id = self_id(meta);
     with_replayer(meta, |replayer| {
         replayer.end().expect("replayer finalization should succeed");
@@ -74,10 +68,8 @@ macro_rules! define_simple_before_handlers {
               subscribe!(
                   Chain::CaptureBefore,
                   CRAPS_PRIORITY,
+                  *ENABLED,
                   |event: Option<&mut $event>, meta| {
-                          if !*ENABLED {
-                              return DiceResult::Ok
-                          }
                           with_replayer(meta, |replayer| {
                               let event = event.expect("event should be present");
                               event.set_func(return_zero as *const c_void);
@@ -120,10 +112,7 @@ define_simple_before_handlers!(
 
 macro_rules! define_after_replay_handler {
     ($event_ty:ty, $record_variant:ident, |$event:ident, $record:ident| $body:block) => {
-        subscribe!(Chain::CaptureAfter, CRAPS_PRIORITY, |event: Option<&mut $event_ty>, meta| {
-            if !*ENABLED {
-                return DiceResult::Ok
-            }
+        subscribe!(Chain::CaptureAfter, CRAPS_PRIORITY, *ENABLED, |event: Option<&mut $event_ty>, meta| {
             let $event = event.expect("event should be present");
             if unsafe { $event.to_record() }.is_none() {
                 return DiceResult::Ok

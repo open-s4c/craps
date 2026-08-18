@@ -12,7 +12,7 @@ use super::{
     ReaderError,
 };
 
-pub(crate) struct SerdeJsonReader<T> {
+pub struct SerdeJsonReader<T> {
     iter: StreamDeserializer<
         'static,
         IoRead<File>,
@@ -92,7 +92,7 @@ where
     }
 }
 
-pub(crate) fn from_path<T>(
+pub fn from_path<T>(
     path: &str,
 ) -> Result<SerdeJsonReader<T>, ReaderError>
 where

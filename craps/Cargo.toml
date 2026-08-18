@@ -9,7 +9,7 @@ name = "craps"
 crate-type = ["staticlib", "rlib"]
 
 [features]
-default = ["abomonation"]
+default = []
 
 interpose-memcpy = []
 lto = ["dice-rs/lto"]
@@ -47,30 +47,28 @@ dice-unistd = ["dice-rs/dice-unistd"]
 # serialization
 
 serde-json = [
+    "felt/serde-json",
     "dep:serde",
-    "dep:serde_json",
 ]
 
 abomonation = [
+    "felt/abomonation",
     "dep:abomonation",
     "dep:abomonation_derive",
-    "dep:memmap2",
 ]
 
 rkyv = [
+    "felt/rkyv",
     "dep:rkyv",
-    "dep:memmap2",
 ]
 
 [dependencies]
 dice-rs = { workspace = true }
+felt = { workspace = true }
 ctor = { workspace = true }
-log = { workspace = true }
-serde = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
-libc = { workspace = true }
 lazy_static = { workspace = true }
+libc = { workspace = true }
+serde = { workspace = true, optional = true }
 abomonation = { workspace = true, optional = true }
 abomonation_derive = { workspace = true, optional = true }
 rkyv = { workspace = true, optional = true }
-memmap2 = { workspace = true, optional = true }

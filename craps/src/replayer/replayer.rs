@@ -1,7 +1,4 @@
-use std::{
-    sync::{LazyLock, Mutex},
-    thread,
-};
+use std::thread;
 
 use dice_rs::{
     DiceThreadId,
@@ -11,13 +8,15 @@ use dice_rs::{
 };
 
 use crate::{
-    reader::{
-        Reader,
-        ReaderError,
-        self,
-    },
     record::ReplayRecord,
 };
+
+use felt::reader::{
+    Reader,
+    ReaderError,
+    self,
+};
+use crate::record::RecordEnum;
 
 type RecordReader = Box<dyn Reader<ReplayRecord>>;
 
@@ -38,7 +37,7 @@ impl Replayer {
 
         let path = format!("records/craps_{thread_id}.txt");
 
-        let reader = reader::from_path::<ReplayRecord>(&path)
+        let reader = reader::from_path::<RecordEnum>(&path)
             .expect("should be able to open the trace");
 
         self.records = Some(Box::new(reader));

@@ -1,3 +1,8 @@
+#![cfg_attr(
+    feature = "abomonation",
+    allow(non_local_definitions)
+)]
+
 use dice_rs::events::*;
 use std::ffi::CStr;
 use std::fmt::Debug;
@@ -100,8 +105,8 @@ record_type! {
     }
 }
 
-pub trait ToRecordEnum {
-    unsafe fn to_record(&self) -> Option<RecordEnum>;
+pub(crate) trait ToRecordEnum {
+    fn to_record(&self) -> Option<RecordEnum>;
 }
 
 record_type! {
@@ -132,7 +137,7 @@ record_type! {
 
 impl ToRecordEnum for PollEvent {
     // safe as long as poll call is valid, i.e., the array pointer and size are correct
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let fds_vec: Vec<Pollfd> = (0..self.nfds)
             .map(|i| unsafe { *self.fds.add(i as usize) })
             .map(Pollfd::from_libc_pollfd)
@@ -157,8 +162,8 @@ record_type! {
 
 impl ToRecordEnum for GetrandomEvent {
     // safe as long as buf is safe
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
-        let buf = slice::from_raw_parts(self.buf as *const u8, self.size).to_vec();
+    fn to_record(&self) -> Option<RecordEnum> {
+        let buf = unsafe { slice::from_raw_parts(self.buf as *const u8, self.size) }.to_vec();
         Some(RecordEnum::GetrandomRecord(GetrandomRecord {
             buf: buf,
             size: self.size,
@@ -169,7 +174,7 @@ impl ToRecordEnum for GetrandomEvent {
 }
 
 record_type! {
-pub struct SocketRecord {
+pub(crate) struct SocketRecord {
     pub domain: libc::c_int,
     pub type_: libc::c_int,
     pub protocol: libc::c_int,
@@ -178,7 +183,7 @@ pub struct SocketRecord {
 }}
 
 impl ToRecordEnum for SocketEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::SocketRecord(SocketRecord {
             domain: self.domain,
             type_: self.type_,
@@ -190,7 +195,7 @@ impl ToRecordEnum for SocketEvent {
 }
 
 record_type! {
-pub struct ConnectRecord {
+pub(crate) struct ConnectRecord {
     pub sockfd: libc::c_int,
     pub addr: Vec<u8>,       // stores the bytes of the sockaddr
     pub addrlen: socklen_t,
@@ -199,10 +204,10 @@ pub struct ConnectRecord {
 }}
 
 impl ToRecordEnum for ConnectEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         // convert the sockaddr pointer to a byte vector
         let addr = if !self.addr.is_null() && self.addrlen > 0 {
-            std::slice::from_raw_parts(self.addr as *const u8, self.addrlen as usize).to_vec()
+            unsafe { slice::from_raw_parts(self.addr as *const u8, self.addrlen as usize) }.to_vec()
         } else {
             Vec::new()
         };
@@ -218,7 +223,7 @@ impl ToRecordEnum for ConnectEvent {
 }
 
 record_type! {
-pub struct SetsockoptRecord {
+pub(crate) struct SetsockoptRecord {
     pub sockfd: libc::c_int,
     pub level: libc::c_int,
     pub optname: libc::c_int,
@@ -230,14 +235,14 @@ pub struct SetsockoptRecord {
 
 impl ToRecordEnum for SetsockoptEvent {
     // safe as long as optval is valid for optlen bytes
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let optval = if self.optval.is_null() || self.optlen == 0 {
             Vec::new()
         } else {
-            slice::from_raw_parts(
+            unsafe { slice::from_raw_parts(
                 self.optval as *const u8,
                 self.optlen as usize,
-            )
+            ) }
                 .to_vec()
         };
 
@@ -254,7 +259,7 @@ impl ToRecordEnum for SetsockoptEvent {
 }
 
 record_type! {
-pub struct BindRecord {
+pub(crate) struct BindRecord {
     pub sockfd: libc::c_int,
 
     pub sa_family: sa_family_t,
@@ -266,19 +271,19 @@ pub struct BindRecord {
 }}
 
 impl ToRecordEnum for BindEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let (sa_family, sa_data) = if self.addr.is_null() {
             (0, Vec::new())
         } else {
             let addrlen = self.addrlen as usize;
 
-            let raw = std::slice::from_raw_parts(
+            let raw = unsafe { slice::from_raw_parts(
                 self.addr as *const u8,
                 addrlen,
-            )
+            ) }
                 .to_vec();
 
-            ((*self.addr).sa_family, raw)
+            (unsafe { *self.addr }.sa_family, raw)
         };
 
         Some(RecordEnum::BindRecord(BindRecord {
@@ -293,7 +298,7 @@ impl ToRecordEnum for BindEvent {
 }
 
 record_type! {
-pub struct GetsockoptRecord {
+pub(crate) struct GetsockoptRecord {
     pub sockfd: libc::c_int,
     pub level: libc::c_int,
     pub optname: libc::c_int,
@@ -306,20 +311,20 @@ pub struct GetsockoptRecord {
 }}
 
 impl ToRecordEnum for GetsockoptEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let optlen = if self.optlen.is_null() {
             0
         } else {
-            *self.optlen
+            unsafe { *self.optlen }
         };
 
         let optval = if self.optval.is_null() || optlen == 0 {
             Vec::new()
         } else {
-            std::slice::from_raw_parts(
+            unsafe { slice::from_raw_parts(
                 self.optval as *const u8,
                 optlen as usize,
-            )
+            ) }
                 .to_vec()
         };
 
@@ -336,7 +341,7 @@ impl ToRecordEnum for GetsockoptEvent {
 }
 
 record_type! {
-pub struct SendtoRecord {
+pub(crate) struct SendtoRecord {
     pub sockfd: libc::c_int,
 
     pub buf: Vec<u8>,
@@ -353,27 +358,27 @@ pub struct SendtoRecord {
 }}
 
 impl ToRecordEnum for SendtoEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let buf = if self.buf.is_null() || self.len == 0 {
             Vec::new()
         } else {
-            std::slice::from_raw_parts(
+            unsafe { slice::from_raw_parts(
                 self.buf as *const u8,
                 self.len,
-            )
+            ) }
                 .to_vec()
         };
 
         let (sa_family, dest_addr) = if self.dest_addr.is_null() {
             (0, Vec::new())
         } else {
-            let raw = std::slice::from_raw_parts(
+            let raw = unsafe { slice::from_raw_parts(
                 self.dest_addr as *const u8,
                 self.addrlen as usize,
-            )
+            ) }
                 .to_vec();
 
-            ((*self.dest_addr).sa_family, raw)
+            (unsafe { *self.dest_addr }.sa_family, raw)
         };
 
         Some(RecordEnum::SendtoRecord(SendtoRecord {
@@ -391,13 +396,13 @@ impl ToRecordEnum for SendtoEvent {
 }
 
 record_type! {
-pub struct IovecRecord {
+pub(crate) struct IovecRecord {
     pub data: Vec<u8>,
     pub len: usize,
 }}
 
 record_type! {
-pub struct WritevRecord {
+pub(crate) struct WritevRecord {
     pub fd: libc::c_int,
     pub iov: Vec<IovecRecord>,
     pub iovcnt: libc::c_int,
@@ -406,23 +411,23 @@ pub struct WritevRecord {
 }}
 
 impl ToRecordEnum for WritevEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let iov = if self.iov.is_null() || self.iovcnt <= 0 {
             Vec::new()
         } else {
-            std::slice::from_raw_parts(
+            unsafe { slice::from_raw_parts(
                 self.iov,
                 self.iovcnt as usize,
-            )
+            ) }
                 .iter()
                 .map(|iov| {
                     let data = if iov.iov_base.is_null() || iov.iov_len == 0 {
                         Vec::new()
                     } else {
-                        std::slice::from_raw_parts(
+                        unsafe { slice::from_raw_parts(
                             iov.iov_base as *const u8,
                             iov.iov_len,
-                        )
+                        ) }
                             .to_vec()
                     };
 
@@ -445,7 +450,7 @@ impl ToRecordEnum for WritevEvent {
 }
 
 record_type! {
-pub struct RecvfromRecord {
+pub(crate) struct RecvfromRecord {
     pub sockfd: libc::c_int,
     pub buf: Vec<u8>,
     pub len: usize,
@@ -458,26 +463,26 @@ pub struct RecvfromRecord {
 
 impl ToRecordEnum for RecvfromEvent {
     // safe as long as pointers are valid
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
-        let buf = slice::from_raw_parts(
+    fn to_record(&self) -> Option<RecordEnum> {
+        let buf = unsafe { slice::from_raw_parts(
             self.buf as *const u8,
             self.ret as usize,
-        )
+        ) }
             .to_vec();
 
         let addrlen = if self.addrlen.is_null() {
             0
         } else {
-            *self.addrlen
+            unsafe { *self.addrlen }
         };
 
         let src_addr = if self.src_addr.is_null() || addrlen == 0 {
             Vec::new()
         } else {
-            slice::from_raw_parts(
+            unsafe { slice::from_raw_parts(
                 self.src_addr as *const u8,
                 addrlen as usize,
-            )
+            ) }
                 .to_vec()
         };
 
@@ -495,7 +500,7 @@ impl ToRecordEnum for RecvfromEvent {
 }
 
 record_type! {
-pub struct ShutdownRecord {
+pub(crate) struct ShutdownRecord {
     pub sockfd: libc::c_int,
     pub how: libc::c_int,
     pub ret: libc::c_int,
@@ -503,7 +508,7 @@ pub struct ShutdownRecord {
 }}
 
 impl ToRecordEnum for ShutdownEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::ShutdownRecord(ShutdownRecord {
             sockfd: self.sockfd,
             how: self.how,
@@ -514,14 +519,14 @@ impl ToRecordEnum for ShutdownEvent {
 }
 
 record_type! {
-pub struct CloseRecord {
+pub(crate) struct CloseRecord {
     pub fd: libc::c_int,
     pub ret: libc::c_int,
     pub errno: libc::c_int,
 }}
 
 impl ToRecordEnum for CloseEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::CloseRecord(CloseRecord {
             fd: self.fd,
             ret: self.ret,
@@ -531,13 +536,13 @@ impl ToRecordEnum for CloseEvent {
 }
 
 record_type! {
-pub struct EpollEventRecord {
+pub(crate) struct EpollEventRecord {
     pub events: u32,
     pub data: u64,
 }}
 
 record_type! {
-pub struct EpollWaitRecord {
+pub(crate) struct EpollWaitRecord {
     pub epfd: libc::c_int,
     pub events: Vec<EpollEventRecord>,
     pub maxevents: libc::c_int,
@@ -547,15 +552,15 @@ pub struct EpollWaitRecord {
 
 impl ToRecordEnum for EpollWaitEvent {
     // safe as long as events pointer is valid
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let events = if self.events.is_null() || self.ret <= 0 {
             Vec::new()
         } else {
-            slice::from_raw_parts(self.events, self.ret as usize)
+            unsafe { slice::from_raw_parts(self.events, self.ret as usize) }
                 .iter()
                 .map(|ev| EpollEventRecord {
                     events: ev.events,
-                    data: ev.data.u64_,
+                    data: unsafe { ev.data.u64_ },
                 })
                 .collect()
         };
@@ -571,13 +576,13 @@ impl ToRecordEnum for EpollWaitEvent {
 }
 
 record_type! {
-pub struct EpollCreate1Record {
+pub(crate) struct EpollCreate1Record {
     pub flags: libc::c_int,
     pub ret: libc::c_int,
 }}
 
 impl ToRecordEnum for EpollCreate1Event {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::EpollCreate1Record(EpollCreate1Record {
             flags: self.flags,
             ret: self.ret,
@@ -586,13 +591,13 @@ impl ToRecordEnum for EpollCreate1Event {
 }
 
 record_type! {
-pub struct EpollCtlEventRecord {
+pub(crate) struct EpollCtlEventRecord {
     pub events: u32,
     pub data: u64,
 }}
 
 record_type! {
-pub struct EpollCtlRecord {
+pub(crate) struct EpollCtlRecord {
     pub epfd: libc::c_int,
     pub op: libc::c_int,
     pub fd: libc::c_int,
@@ -602,13 +607,15 @@ pub struct EpollCtlRecord {
 
 impl ToRecordEnum for EpollCtlEvent {
     // safe as long as event pointer is valid
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let event = if self.event.is_null() {
             None
         } else {
+            let event = unsafe { *self.event };
+            let data = event.data;
             Some(EpollCtlEventRecord {
-                events: (*self.event).events,
-                data: (*self.event).data.u64_,
+                events: event.events,
+                data: unsafe { data.u64_ },
             })
         };
 
@@ -623,7 +630,7 @@ impl ToRecordEnum for EpollCtlEvent {
 }
 
 record_type! {
-pub struct MsgHdrRecord {
+pub(crate) struct MsgHdrRecord {
     pub name: Vec<u8>,
     pub namelen: libc::socklen_t,
     pub iov: Vec<Vec<u8>>, // iovec data inlined
@@ -633,7 +640,7 @@ pub struct MsgHdrRecord {
 }}
 
 record_type! {
-pub struct SendmsgRecord {
+pub(crate) struct SendmsgRecord {
     pub sockfd: libc::c_int,
     pub msg: Option<MsgHdrRecord>,
     pub flags: libc::c_int,
@@ -642,7 +649,7 @@ pub struct SendmsgRecord {
 }}
 
 record_type! {
-pub struct RecvmsgRecord {
+pub(crate) struct RecvmsgRecord {
     pub sockfd: libc::c_int,
     pub msg: Option<MsgHdrRecord>,
     pub flags: libc::c_int,
@@ -651,18 +658,18 @@ pub struct RecvmsgRecord {
 }}
 
 /// Helper to safely copy a raw msghdr pointer into an owned MsgHdrRecord
-unsafe fn copy_msghdr(ptr: *const msghdr) -> Option<MsgHdrRecord> {
+fn copy_msghdr(ptr: *const msghdr) -> Option<MsgHdrRecord> {
     if ptr.is_null() {
         return None;
     }
 
-    let hdr = &*ptr;
+    let hdr = & unsafe { *ptr };
 
     // Copy socket address
     let name = if hdr.msg_name.is_null() || hdr.msg_namelen == 0 {
         Vec::new()
     } else {
-        slice::from_raw_parts(hdr.msg_name as *const u8, hdr.msg_namelen as usize)
+        unsafe { slice::from_raw_parts(hdr.msg_name as *const u8, hdr.msg_namelen as usize) }
             .to_vec()
     };
 
@@ -670,13 +677,13 @@ unsafe fn copy_msghdr(ptr: *const msghdr) -> Option<MsgHdrRecord> {
     let iov = if hdr.msg_iov.is_null() || hdr.msg_iovlen == 0 {
         Vec::new()
     } else {
-        slice::from_raw_parts(hdr.msg_iov, hdr.msg_iovlen)
+        unsafe { slice::from_raw_parts(hdr.msg_iov, hdr.msg_iovlen) }
             .iter()
             .map(|iov| {
                 if iov.iov_base.is_null() || iov.iov_len == 0 {
                     Vec::new()
                 } else {
-                    slice::from_raw_parts(iov.iov_base as *const u8, iov.iov_len)
+                    unsafe { slice::from_raw_parts(iov.iov_base as *const u8, iov.iov_len) }
                         .to_vec()
                 }
             })
@@ -687,7 +694,7 @@ unsafe fn copy_msghdr(ptr: *const msghdr) -> Option<MsgHdrRecord> {
     let control = if hdr.msg_control.is_null() || hdr.msg_controllen == 0 {
         Vec::new()
     } else {
-        slice::from_raw_parts(hdr.msg_control as *const u8, hdr.msg_controllen).to_vec()
+        unsafe { slice::from_raw_parts(hdr.msg_control as *const u8, hdr.msg_controllen) }.to_vec()
     };
 
     Some(MsgHdrRecord {
@@ -701,7 +708,7 @@ unsafe fn copy_msghdr(ptr: *const msghdr) -> Option<MsgHdrRecord> {
 }
 
 impl ToRecordEnum for SendmsgEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::SendmsgRecord(SendmsgRecord {
             sockfd: self.sockfd,
             msg: copy_msghdr(self.msg),
@@ -713,7 +720,7 @@ impl ToRecordEnum for SendmsgEvent {
 }
 
 impl ToRecordEnum for RecvmsgEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::RecvmsgRecord(RecvmsgRecord {
             sockfd: self.sockfd,
             msg: copy_msghdr(self.msg),
@@ -725,14 +732,14 @@ impl ToRecordEnum for RecvmsgEvent {
 }
 
 record_type! {
-pub struct EventfdRecord {
+pub(crate) struct EventfdRecord {
     pub initval: libc::c_uint,
     pub flags: libc::c_int,
     pub ret: libc::c_int,
 }}
 
 impl ToRecordEnum for EventfdEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::EventfdRecord(EventfdRecord {
             initval: self.initval,
             flags: self.flags,
@@ -752,13 +759,13 @@ pub struct SocketpairRecord {
 }}
 
 impl ToRecordEnum for SocketpairEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let sv = if self.sv.is_null() {
             None
         } else {
             Some([
-                *self.sv.offset(0),
-                *self.sv.offset(1),
+                unsafe { *self.sv.offset(0) },
+                unsafe { *self.sv.offset(1) },
             ])
         };
 
@@ -774,7 +781,7 @@ impl ToRecordEnum for SocketpairEvent {
 }
 
 record_type! {
-pub struct WriteRecord {
+pub(crate) struct WriteRecord {
     pub fd: libc::c_int,
     pub buf: Vec<u8>,
     pub count: usize,
@@ -783,11 +790,11 @@ pub struct WriteRecord {
 }}
 
 impl ToRecordEnum for WriteEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let buf = if self.buf.is_null() || self.count == 0 {
             Vec::new()
         } else {
-            slice::from_raw_parts(self.buf as *const u8, self.count)
+            unsafe { slice::from_raw_parts(self.buf as *const u8, self.count) }
                 .to_vec()
         };
 
@@ -802,7 +809,7 @@ impl ToRecordEnum for WriteEvent {
 }
 
 record_type! {
-pub struct ReadRecord {
+pub(crate) struct ReadRecord {
     pub fd: libc::c_int,
     pub buf: Vec<u8>,
     pub count: usize,
@@ -811,11 +818,11 @@ pub struct ReadRecord {
 }}
 
 impl ToRecordEnum for ReadEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let buf = if self.buf.is_null() || self.ret <= 0 {
             Vec::new()
         } else {
-            slice::from_raw_parts(self.buf as *const u8, self.ret as usize)
+            unsafe { slice::from_raw_parts(self.buf as *const u8, self.ret as usize) }
                 .to_vec()
         };
 
@@ -830,7 +837,7 @@ impl ToRecordEnum for ReadEvent {
 }
 
 record_type! {
-pub struct ReadvRecord {
+pub(crate) struct ReadvRecord {
     pub fd: libc::c_int,
     pub iov: Vec<Vec<u8>>, // inlined iovec data
     pub iovcnt: libc::c_int,
@@ -839,13 +846,13 @@ pub struct ReadvRecord {
 }}
 
 impl ToRecordEnum for ReadvEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let iov = if self.iov.is_null() || self.iovcnt <= 0 {
             Vec::new()
         } else {
             // Only copy up to the number of bytes actually read (ret)
             let mut remaining = self.ret;
-            slice::from_raw_parts(self.iov, self.iovcnt as usize)
+            unsafe { slice::from_raw_parts(self.iov, self.iovcnt as usize) }
                 .iter()
                 .map(|iov| {
                     if iov.iov_base.is_null() || iov.iov_len == 0 || remaining <= 0 {
@@ -853,7 +860,7 @@ impl ToRecordEnum for ReadvEvent {
                     } else {
                         let len = std::cmp::min(iov.iov_len as isize, remaining) as usize;
                         remaining -= len as isize;
-                        slice::from_raw_parts(iov.iov_base as *const u8, len).to_vec()
+                        unsafe { slice::from_raw_parts(iov.iov_base as *const u8, len) }.to_vec()
                     }
                 })
                 .collect()
@@ -870,13 +877,13 @@ impl ToRecordEnum for ReadvEvent {
 }
 
 record_type! {
-pub struct TimevalRecord {
+pub(crate) struct TimevalRecord {
     pub tv_sec: libc::c_long,
     pub tv_usec: libc::c_long,
 }}
 
 record_type! {
-pub struct TimespecRecord {
+pub(crate) struct TimespecRecord {
     pub tv_sec: libc::c_long,
     pub tv_nsec: libc::c_long,
 }}
@@ -888,13 +895,14 @@ pub struct GettimeofdayRecord {
 }}
 
 impl ToRecordEnum for GettimeofdayEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let tv = if self.tv.is_null() {
             None
         } else {
+            let tv = unsafe { *self.tv };
             Some(TimevalRecord {
-                tv_sec: (*self.tv).tv_sec,
-                tv_usec: (*self.tv).tv_usec,
+                tv_sec: tv.tv_sec,
+                tv_usec: tv.tv_usec,
             })
         };
 
@@ -906,20 +914,21 @@ impl ToRecordEnum for GettimeofdayEvent {
 }
 
 record_type! {
-pub struct ClockGettimeRecord {
+pub(crate) struct ClockGettimeRecord {
     pub clockid: clockid_t,
     pub tp: Option<TimespecRecord>,
     pub ret: libc::c_int,
 }}
 
 impl ToRecordEnum for ClockGettimeEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let tp = if self.tp.is_null() {
             None
         } else {
+            let tp = unsafe { *self.tp };
             Some(TimespecRecord {
-                tv_sec: (*self.tp).tv_sec,
-                tv_nsec: (*self.tp).tv_nsec,
+                tv_sec: tp.tv_sec,
+                tv_nsec: tp.tv_nsec,
             })
         };
 
@@ -932,7 +941,7 @@ impl ToRecordEnum for ClockGettimeEvent {
 }
 
 record_type! {
-pub struct OpenatRecord {
+pub(crate) struct OpenatRecord {
     pub dirfd: libc::c_int,
     pub path: Option<String>,
     pub flags: libc::c_int,
@@ -941,14 +950,15 @@ pub struct OpenatRecord {
 }}
 
 impl ToRecordEnum for OpenatEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let path = if self.path.is_null() {
             None
         } else {
             Some(
-                CStr::from_ptr(self.path)
-                    .to_string_lossy()
-                    .into_owned(),
+                unsafe { CStr::from_ptr(self.path) }
+                        .to_string_lossy()
+                        .into_owned()
+                ,
             )
         };
 
@@ -963,7 +973,7 @@ impl ToRecordEnum for OpenatEvent {
 }
 
 record_type! {
-pub struct MmapRecord {
+pub(crate) struct MmapRecord {
     pub addr_contents: Option<Vec<u8>>,
     pub length: usize,
     pub prot: libc::c_int,
@@ -974,17 +984,18 @@ pub struct MmapRecord {
 }}
 
 impl ToRecordEnum for MmapEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let addr_contents = if self.addr.is_null() {
             None
         } else if self.length == 0 {
             Some(Vec::new())
         } else {
             Some(
-                std::slice::from_raw_parts(
+                unsafe {
+                slice::from_raw_parts(
                     self.addr.cast::<u8>(),
                     self.length,
-                )
+                ) }
                     .to_vec(),
             )
         };
@@ -1002,7 +1013,7 @@ impl ToRecordEnum for MmapEvent {
 }
 
 record_type! {
-pub struct RecvRecord {
+pub(crate) struct RecvRecord {
     pub sockfd: libc::c_int,
     pub buf: Vec<u8>,
     pub len: usize,
@@ -1012,14 +1023,14 @@ pub struct RecvRecord {
 }}
 
 impl ToRecordEnum for RecvEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let buf = if self.buf.is_null() || self.ret <= 0 {
             Vec::new()
         } else {
-            slice::from_raw_parts(
+            unsafe { slice::from_raw_parts(
                 self.buf as *const u8,
                 self.ret as usize,
-            )
+            ) }
                 .to_vec()
         };
 
@@ -1035,7 +1046,7 @@ impl ToRecordEnum for RecvEvent {
 }
 
 record_type! {
-pub struct SendRecord {
+pub(crate) struct SendRecord {
     pub sockfd: libc::c_int,
     pub buf: Vec<u8>,
     pub len: usize,
@@ -1045,14 +1056,14 @@ pub struct SendRecord {
 }}
 
 impl ToRecordEnum for SendEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let buf = if self.buf.is_null() || self.len == 0 {
             Vec::new()
         } else {
-            slice::from_raw_parts(
+            unsafe { slice::from_raw_parts(
                 self.buf as *const u8,
                 self.len,
-            )
+            ) }
                 .to_vec()
         };
 
@@ -1068,7 +1079,7 @@ impl ToRecordEnum for SendEvent {
 }
 
 record_type! {
-pub struct PpollRecord {
+pub(crate) struct PpollRecord {
     pub fds: Vec<Pollfd>,
     pub tmo_p: Option<TimespecRecord>,
     pub sigmask: Option<Vec<u8>>,
@@ -1078,7 +1089,7 @@ pub struct PpollRecord {
 
 impl ToRecordEnum for PpollEvent {
     // safe as long as the ppoll arguments are valid
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         let fds_vec: Vec<Pollfd> = if self.fds.is_null() || self.nfds == 0 {
             Vec::new()
         } else {
@@ -1122,7 +1133,7 @@ impl ToRecordEnum for PpollEvent {
 }
 
 record_type! {
-pub struct SyscallGetrandomRecord {
+pub(crate) struct SyscallGetrandomRecord {
     pub buf: Vec<u8>,
     pub buflen: usize,
     pub flags: libc::c_uint,
@@ -1131,7 +1142,7 @@ pub struct SyscallGetrandomRecord {
 }}
 
 impl ToRecordEnum for SyscallEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         match self.number {
             libc::SYS_getrandom => {
                 let buf_ptr = self.args[0] as usize as *const u8;
@@ -1141,7 +1152,7 @@ impl ToRecordEnum for SyscallEvent {
                 let buf = if buf_ptr.is_null() || self.ret <= 0 {
                     Vec::new()
                 } else {
-                    slice::from_raw_parts(buf_ptr, self.ret as usize).to_vec()
+                    unsafe { slice::from_raw_parts(buf_ptr, self.ret as usize).to_vec() }
                 };
 
                 Some(RecordEnum::SyscallGetrandomRecord(SyscallGetrandomRecord {
@@ -1158,12 +1169,12 @@ impl ToRecordEnum for SyscallEvent {
 }
 
 record_type! {
-pub struct TimeRecord {
+pub(crate) struct TimeRecord {
     pub ret: time_t,
 }}
 
 impl ToRecordEnum for TimeEvent {
-    unsafe fn to_record(&self) -> Option<RecordEnum> {
+    fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::TimeRecord(TimeRecord {
             ret: self.ret,
         }))

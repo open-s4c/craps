@@ -15,11 +15,12 @@ use crate::{
         RecordEnum,
         ToRecordEnum,
     },
-    writer::{
-        Writer,
-        WriterError,
-        self,
-    },
+};
+
+use felt::writer::{
+    Writer,
+    WriterError,
+    self,
 };
 
 const RECORDER_THRESHOLD: usize = 1;
@@ -89,11 +90,7 @@ impl Recorder {
             return;
         }
 
-        // Safe as long as all ToRecordEnum implementations
-        // uphold the contract of `to_record`.
-        if let Some(record) = unsafe {
-            event.to_record()
-        } {
+        if let Some(record) = event.to_record() {
             self.records.push_back(record);
 
             if self.records.len() >= RECORDER_THRESHOLD {
