@@ -9,7 +9,7 @@ use std::{
     slice,
 };
 
-use crate::{
+use crate::frame::{
     HEADER_SIZE,
     MMAP_SIZE,
     frame_len,

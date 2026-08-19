@@ -1,4 +1,7 @@
-use std::fs::File;
+use std::{
+    fs::File,
+    io::BufReader,
+};
 
 use serde::de::DeserializeOwned;
 use ::serde_json::{
@@ -15,7 +18,7 @@ use super::{
 pub struct SerdeJsonReader<T> {
     iter: StreamDeserializer<
         'static,
-        IoRead<File>,
+        IoRead<BufReader<File>>,
         T,
     >,
 
@@ -35,14 +38,10 @@ where
     fn next(
         &mut self,
     ) -> Result<Option<&T>, ReaderError> {
-        // If peek() has already pulled the next record from the
-        // serde iterator, promote it to the current record.
         if let Some(value) = self.peeked.take() {
             self.current = Some(value);
 
-            return Ok(
-                self.current.as_ref()
-            );
+            return Ok(self.current.as_ref());
         }
 
         match self.iter.next() {
@@ -53,15 +52,11 @@ where
 
             Some(Ok(value)) => {
                 self.current = Some(value);
-
-                Ok(
-                    self.current.as_ref()
-                )
+                Ok(self.current.as_ref())
             }
 
             Some(Err(error)) => {
                 self.current = None;
-
                 Err(Box::new(error))
             }
         }
@@ -86,9 +81,7 @@ where
             }
         }
 
-        Ok(
-            self.peeked.as_ref()
-        )
+        Ok(self.peeked.as_ref())
     }
 }
 
@@ -99,9 +92,10 @@ where
     T: DeserializeOwned + 'static,
 {
     let file = File::open(path)?;
+    let reader = BufReader::new(file);
 
     let iter =
-        Deserializer::from_reader(file)
+        Deserializer::from_reader(reader)
             .into_iter::<T>();
 
     Ok(SerdeJsonReader {

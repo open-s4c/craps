@@ -1,7 +1,4 @@
-use std::{
-    collections::LinkedList,
-    mem,
-};
+use std::mem;
 
 use dice_rs::{
     DiceThreadId,
@@ -10,20 +7,16 @@ use dice_rs::{
     thread::TlsKey,
 };
 
-use crate::{
-    record::{
-        RecordEnum,
-        ToRecordEnum,
-    },
+use crate::record::{
+    RecordEnum,
+    ToRecordEnum,
 };
 
 use felt::writer::{
+    self,
     Writer,
     WriterError,
-    self,
 };
-
-const RECORDER_THRESHOLD: usize = 1;
 
 type RecordWriter =
 Box<dyn Writer<RecordEnum> + Sync>;
@@ -32,14 +25,16 @@ Box<dyn Writer<RecordEnum> + Sync>;
 pub(crate) struct Recorder {
     initd: bool,
     thread_id: Option<DiceThreadId>,
-    records: LinkedList<RecordEnum>,
     writer: Option<RecordWriter>,
 }
 
 tls_key!(RECORDER: Recorder);
 
 impl Recorder {
-    pub fn initialize(&mut self, thread_id: DiceThreadId) {
+    pub fn initialize(
+        &mut self,
+        thread_id: DiceThreadId,
+    ) {
         if self.initd {
             return;
         }
@@ -50,16 +45,18 @@ impl Recorder {
 
         let writer =
             writer::from_path::<RecordEnum>(&path)
-                .expect("trace file creation should succeed");
+                .expect(
+                    "trace file creation should succeed"
+                );
 
         self.writer = Some(Box::new(writer));
         self.thread_id = Some(thread_id);
         self.initd = true;
     }
 
-    pub fn end(&mut self) -> Result<(), WriterError> {
-        self.dump_events()?;
-
+    pub fn end(
+        &mut self,
+    ) -> Result<(), WriterError> {
         let mut writer = self
             .writer
             .take()
@@ -82,43 +79,20 @@ impl Recorder {
     pub fn record_event<T>(
         &mut self,
         event: &T,
-    )
+    ) -> Result<(), WriterError>
     where
         T: ToRecordEnum,
     {
         if !self.initd {
-            return;
+            return Ok(());
         }
-
         if let Some(record) = event.to_record() {
-            self.records.push_back(record);
-
-            if self.records.len() >= RECORDER_THRESHOLD {
-                self.dump_events()
-                    .expect("event dump should succeed");
-            }
-        }
-    }
-
-    fn dump_events(
-        &mut self,
-    ) -> Result<(), WriterError> {
-        if !self.initd {
-            return Ok(());
-        }
-
-        let Some(writer) = self.writer.as_mut() else {
-            return Ok(());
-        };
-
-        while let Some(record) =
-            self.records.pop_front()
-        {
+            let writer = self.writer
+                .as_mut()
+                .expect("writer must have been initialized");
             writer.write(&record)?;
+            return writer.flush()
         }
-
-        writer.flush()?;
-
         Ok(())
     }
 }

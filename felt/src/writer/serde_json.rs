@@ -1,6 +1,9 @@
 use std::{
     fs::File,
-    io::Write as IoWrite,
+    io::{
+        BufWriter,
+        Write,
+    },
 };
 
 use serde::Serialize;
@@ -10,8 +13,8 @@ use super::{
     WriterError,
 };
 
-struct JsonWriter {
-    file: File,
+pub struct JsonWriter {
+    writer: BufWriter<File>,
 }
 
 impl<T> Writer<T> for JsonWriter
@@ -22,8 +25,8 @@ where
         &mut self,
         value: &T,
     ) -> Result<(), WriterError> {
-        ::serde_json::to_writer(
-            &mut self.file,
+        serde_json::to_writer(
+            &mut self.writer,
             value,
         )?;
 
@@ -33,7 +36,7 @@ where
     fn flush(
         &mut self,
     ) -> Result<(), WriterError> {
-        self.file.flush()?;
+        self.writer.flush()?;
         Ok(())
     }
 }
@@ -48,6 +51,8 @@ where
     T: Serialize + 'static,
 {
     Ok(JsonWriter {
-        file: File::create(path)?,
+        writer: BufWriter::new(
+            File::create(path)?
+        ),
     })
 }

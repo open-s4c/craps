@@ -8,7 +8,7 @@ use memmap2::{
     MmapOptions,
 };
 
-use crate::MMAP_SIZE;
+use crate::frame::MMAP_SIZE;
 
 use super::WriterError;
 

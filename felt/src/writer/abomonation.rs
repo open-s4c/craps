@@ -5,7 +5,7 @@ use std::{
 
 use ::abomonation::Abomonation;
 
-use crate::{
+use crate::frame::{
     ALIGNMENT,
     HEADER_SIZE,
     frame_len,
