@@ -1,34 +1,37 @@
 use std::{
-    fs::File,
-    io::Write as IoWrite,
+    any::type_name,
+    io::{
+        Error,
+        ErrorKind,
+    },
+    mem::align_of,
 };
 
 use ::abomonation::Abomonation;
 
-use crate::frame::{
-    ALIGNMENT,
-    HEADER_SIZE,
-    frame_len,
-    padding_len,
-};
-
 use super::{
     Writer,
     WriterError,
-    opaque_mmap::OpaqueMmap,
+    mapped::MappedWriter,
 };
 
-struct AbomonationWriter {
-    file: File,
-
-    /// Shadow VMA only. Its bytes are never read or written.
-    opaque_mmap: OpaqueMmap,
-
-    /// Current logical trace-file position.
-    offset: u64,
+fn invalid_data(
+    message: impl Into<String>,
+) -> WriterError {
+    Box::new(
+        Error::new(
+            ErrorKind::InvalidData,
+            message.into(),
+        )
+    )
 }
 
-impl<T> Writer<T> for AbomonationWriter
+struct AbomonationWriter {
+    inner: MappedWriter,
+}
+
+impl<T> Writer<T>
+for AbomonationWriter
 where
     T: Abomonation,
 {
@@ -36,79 +39,124 @@ where
         &mut self,
         value: &T,
     ) -> Result<(), WriterError> {
-        let mut payload = Vec::new();
-
-        // SAFETY:
-        // Required by Abomonation's serialization API.
-        unsafe {
-            ::abomonation::encode(
-                value,
-                &mut payload,
-            )?;
-        }
-
-        let total_len = frame_len(payload.len())
-            .ok_or_else(|| {
-                std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "trace frame length overflow",
-                )
-            })?;
-
         /*
-         * Mirror the reader's two-stage mmap behavior.
-         *
-         * Stage 1:
-         * The reader first has to see the frame header.
+         * Determine the exact encoded payload size first so that
+         * the complete frame can be made simultaneously visible
+         * before serialization starts.
          */
-        self.opaque_mmap.ensure_range(
-            self.offset,
-            HEADER_SIZE,
-        )?;
-
         let payload_len =
-            u64::try_from(payload.len())?;
+            ::abomonation::measure(
+                value
+            );
 
-        // Write directly to the file. The mmap is deliberately
-        // untouched.
-        self.file.write_all(
-            &payload_len.to_le_bytes()
-        )?;
-
-        self.file.write_all(&[0; 8])?;
+        let frame =
+            self.inner
+                .prepare_frame(
+                    payload_len
+                )?;
 
         /*
-         * Stage 2:
-         * Once the reader knows payload_len, it checks whether the
-         * entire frame fits in the current mmap. Mirror that here.
+         * Abomonation decode later interprets the beginning of the
+         * payload as T, so verify that the mapped destination has
+         * the alignment required by T.
          */
-        self.opaque_mmap.ensure_range(
-            self.offset,
-            total_len,
-        )?;
+        let aligned = {
+            let payload =
+                self.inner
+                    .payload_mut(
+                        frame
+                    );
 
-        self.file.write_all(&payload)?;
+            (payload.as_ptr() as usize)
+                % align_of::<T>()
+                == 0
+        };
 
-        let padding =
-            padding_len(payload.len());
+        if !aligned {
+            self.inner
+                .abort_frame(
+                    frame
+                )?;
 
-        if padding != 0 {
-            self.file.write_all(
-                &[0; ALIGNMENT][..padding]
-            )?;
+            return Err(
+                invalid_data(format!(
+                    "Abomonation payload is not aligned for {}",
+                    type_name::<T>(),
+                ))
+            );
         }
 
-        self.offset = self
-            .offset
-            .checked_add(
-                u64::try_from(total_len)?
-            )
-            .ok_or_else(|| {
-                std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "trace offset overflow",
+        /*
+         * Encode directly into the MAP_SHARED payload.
+         *
+         * &mut [u8] implements std::io::Write. As bytes are
+         * written, the slice advances to its unwritten remainder.
+         */
+        let encode_result = {
+            let payload =
+                self.inner
+                    .payload_mut(
+                        frame
+                    );
+
+            let mut destination:
+                &mut [u8] =
+                payload;
+
+            let result = unsafe {
+                ::abomonation::encode(
+                    value,
+                    &mut destination,
                 )
-            })?;
+            };
+
+            result.map(
+                |_| destination.len()
+            )
+        };
+
+        match encode_result {
+            Ok(0) => {}
+
+            Ok(remaining) => {
+                self.inner
+                    .abort_frame(
+                        frame
+                    )?;
+
+                return Err(
+                    invalid_data(format!(
+                        "Abomonation measure/encode mismatch: \
+                         {remaining} payload bytes remained"
+                    ))
+                );
+            }
+
+            Err(error) => {
+                /*
+                 * Best effort to restore EOF to the last committed
+                 * frame before returning the serialization error.
+                 */
+                let _ =
+                    self.inner
+                        .abort_frame(
+                            frame
+                        );
+
+                return Err(
+                    error.into()
+                );
+            }
+        }
+
+        /*
+         * Padding and header are finalized only after encoding has
+         * succeeded. The payload length is written last.
+         */
+        self.inner
+            .commit_frame(
+                frame
+            )?;
 
         Ok(())
     }
@@ -116,8 +164,7 @@ where
     fn flush(
         &mut self,
     ) -> Result<(), WriterError> {
-        self.file.flush()?;
-        Ok(())
+        self.inner.flush()
     }
 }
 
@@ -130,12 +177,12 @@ pub fn from_path<T>(
 where
     T: Abomonation + 'static,
 {
-    let file = File::create(path)?;
-
-    Ok(AbomonationWriter {
-        file,
-        opaque_mmap:
-        OpaqueMmap::new()?,
-        offset: 0,
-    })
+    Ok(
+        AbomonationWriter {
+            inner:
+            MappedWriter::from_path(
+                path
+            )?,
+        }
+    )
 }

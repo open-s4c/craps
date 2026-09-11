@@ -83,7 +83,8 @@ where
 
         let ptr = {
             let payload =
-                self.inner.payload_mut(frame);
+                self.inner
+                    .payload_mut(frame);
 
             let (
                 value,
@@ -132,10 +133,14 @@ where
         };
 
         let ptr =
-            self.ensure_decoded(frame)?;
+            self.ensure_decoded(
+                frame
+            )?;
 
         Ok(Some(
-            unsafe { &*ptr }
+            unsafe {
+                &*ptr
+            }
         ))
     }
 
@@ -149,14 +154,21 @@ where
         };
 
         let ptr =
-            self.ensure_decoded(frame)?;
+            self.ensure_decoded(
+                frame
+            )?;
 
-        self.inner.advance(frame);
+        self.inner.advance(
+            frame
+        );
 
-        self.decoded_offset = None;
+        self.decoded_offset =
+            None;
 
         Ok(Some(
-            unsafe { &*ptr }
+            unsafe {
+                &*ptr
+            }
         ))
     }
 }
@@ -170,11 +182,18 @@ pub fn from_path<T>(
 where
     T: Abomonation + 'static,
 {
-    Ok(AbomonationReader {
-        inner:
-        MappedReader::from_path(path)?,
+    Ok(
+        AbomonationReader {
+            inner:
+            MappedReader::from_path(
+                path
+            )?,
 
-        decoded_offset: None,
-        _marker: PhantomData,
-    })
+            decoded_offset:
+            None,
+
+            _marker:
+            PhantomData,
+        }
+    )
 }

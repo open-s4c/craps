@@ -11,25 +11,19 @@ use std::slice;
 #[cfg(not(any(
     feature = "serde-json",
     feature = "abomonation",
-    feature = "rkyv",
 )))]
 compile_error!(
     "one serialization feature must be enabled: \
-     `serde-json`, `abomonation`, or `rkyv`"
+     `serde-json` or `abomonation`"
 );
 
 #[cfg(any(
     all(feature = "serde-json", feature = "abomonation"),
-    all(feature = "serde-json", feature = "rkyv"),
-    all(feature = "abomonation", feature = "rkyv"),
 ))]
 compile_error!(
     "serialization features are mutually exclusive: \
-     enable only one of `serde-json`, `abomonation`, or `rkyv`"
+     enable only one of `serde-json` or `abomonation`"
 );
-
-#[cfg(feature = "rkyv")]
-pub(crate) use ArchivedRecordEnum as ReplayRecord;
 
 #[cfg(any(
     feature = "serde-json",
@@ -47,18 +41,6 @@ macro_rules! record_type {
         #[cfg_attr(
             feature = "abomonation",
             derive(abomonation_derive::Abomonation)
-        )]
-        #[cfg_attr(
-            feature = "rkyv",
-            derive(
-                rkyv::Archive,
-                rkyv::Serialize,
-                rkyv::Deserialize
-            )
-        )]
-        #[cfg_attr(
-            feature = "rkyv",
-            rkyv(derive(Debug))
         )]
         $item
     };

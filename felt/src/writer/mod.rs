@@ -4,14 +4,10 @@ pub mod serde_json;
 #[cfg(feature = "abomonation")]
 pub mod abomonation;
 
-#[cfg(feature = "rkyv")]
-pub mod rkyv;
-
 #[cfg(any(
     feature = "abomonation",
-    feature = "rkyv",
 ))]
-mod opaque_mmap;
+mod mapped;
 
 use std::error::Error;
 
@@ -34,6 +30,3 @@ pub use serde_json::from_path;
 
 #[cfg(feature = "abomonation")]
 pub use abomonation::from_path;
-
-#[cfg(feature = "rkyv")]
-pub use rkyv::from_path;

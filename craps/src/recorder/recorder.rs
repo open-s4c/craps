@@ -21,24 +21,17 @@ use felt::writer::{
 type RecordWriter =
 Box<dyn Writer<RecordEnum> + Sync>;
 
-#[derive(Default)]
 pub(crate) struct Recorder {
-    initd: bool,
-    thread_id: Option<DiceThreadId>,
-    writer: Option<RecordWriter>,
+    thread_id: DiceThreadId,
+    writer: RecordWriter,
 }
 
-tls_key!(RECORDER: Recorder);
+tls_key!(RECORDER: Option<Recorder>);
 
 impl Recorder {
-    pub fn initialize(
-        &mut self,
+    pub(crate) fn new(
         thread_id: DiceThreadId,
-    ) {
-        if self.initd {
-            return;
-        }
-
+    ) -> Self {
         let path = format!(
             "records/craps_{thread_id}.txt"
         );
@@ -49,28 +42,22 @@ impl Recorder {
                     "trace file creation should succeed"
                 );
 
-        self.writer = Some(Box::new(writer));
-        self.thread_id = Some(thread_id);
-        self.initd = true;
+        Self {
+            thread_id,
+            writer: Box::new(writer),
+        }
     }
 
     pub fn end(
-        &mut self,
+        mut self,
     ) -> Result<(), WriterError> {
-        let mut writer = self
-            .writer
-            .take()
-            .expect(
-                "trace writer should be initialized \
-                 and end should only be called once",
-            );
-
-        writer.flush()?;
+        self.writer.flush()?;
 
         // Deliberately prevent the writer from being dropped.
         //
         // The underlying File therefore remains alive and
         // its file descriptor remains open.
+        let writer = self.writer;
         mem::forget(writer);
 
         Ok(())
@@ -83,23 +70,18 @@ impl Recorder {
     where
         T: ToRecordEnum,
     {
-        if !self.initd {
+        let Some(record) = event.to_record() else {
             return Ok(());
-        }
-        if let Some(record) = event.to_record() {
-            let writer = self.writer
-                .as_mut()
-                .expect("writer must have been initialized");
-            writer.write(&record)?;
-            return writer.flush()
-        }
-        Ok(())
+        };
+
+        self.writer.write(&record)?;
+        self.writer.flush()
     }
 }
 
 pub(crate) fn with_recorder<R>(
     meta: &mut Metadata,
-    f: impl FnOnce(&mut Recorder) -> R,
+    f: impl FnOnce(&mut Option<Recorder>) -> R,
 ) -> R {
     RECORDER.with(meta, f)
 }

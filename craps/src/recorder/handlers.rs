@@ -1,57 +1,90 @@
 use dice_rs::{
     Chain, DiceResult, events::*,
-    subscribe, thread::*,
+    thread::*,
 };
-use lazy_static::lazy_static;
+
 use super::recorder::*;
 
-const CRAPS_PRIORITY: i32 = match i32::from_str_radix(env!("CRAPS_PRIORITY", "CRAPS_PRIORITY must be set"), 10) {
-    Ok(val) => val,
-    Err(_) => panic!("Failed to parse CRAPS_PRIORITY as i32")
+use crate::{
+    RuntimeMode::Record,
+    RUNTIME_MODE,
 };
 
-lazy_static! {
-    static ref ENABLED: bool = {
-        match std::env::var("RUNTIME_MODE").as_deref() {
-            Ok("RECORD") => true,
-            Ok("REPLAY") => false,
-            _ => panic!("RUNTIME_MODE must be either RECORD or REPLAY"),
-        }
+macro_rules! subscribe {
+    ($chain:expr, |$e:ident: Option<&mut $t:ty>, $m:ident| $body:block) => {
+        crate::subscribe!(
+            $chain,
+            (*RUNTIME_MODE == Record),
+            |$e: Option<&mut $t>, $m| $body
+        );
     };
 }
 
-subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, *ENABLED, |_event: Option<&mut SelfInitEvent>, meta| {
-    let thread_id = self_id(meta);
-    with_recorder(meta, |trace| {
-        trace.initialize(thread_id);
-    });
+macro_rules! subscribe_init {
+    ($chain:expr, |$e:ident: Option<&mut $t:ty>, $m:ident| $body:block) => {
+        crate::subscribe_init!(
+            $chain,
+            (*RUNTIME_MODE == Record),
+            |$e: Option<&mut $t>, $m| $body
+        );
+    };
+}
 
-    DiceResult::Ok
-});
+subscribe_init!(
+    Chain::CaptureEvent,
+    |_event: Option<&mut SelfInitEvent>, meta| {
+        let thread_id = self_id(meta);
 
-subscribe!(Chain::CaptureEvent, CRAPS_PRIORITY, *ENABLED, |_event: Option<&mut SelfFiniEvent>, meta| {
-    with_recorder(meta, |trace| {
-        trace.end().expect("trace finalization should succeed");
-    });
-    DiceResult::Ok
-});
+        with_recorder(meta, |recorder| {
+            recorder.get_or_insert_with(|| {
+                Recorder::new(thread_id)
+            });
+        });
+
+        DiceResult::Ok
+    }
+);
+
+subscribe!(
+    Chain::CaptureEvent,
+    |_event: Option<&mut SelfFiniEvent>, meta| {
+        with_recorder(meta, |recorder| {
+            recorder
+                .take()
+                .expect("recorder should be initialized")
+                .end()
+                .expect("trace finalization should succeed");
+        });
+
+        DiceResult::Ok
+    }
+);
 
 macro_rules! define_simple_handlers {
     ($($event:ty),* $(,)?) => {
-          $(
-              subscribe!(
-                  Chain::CaptureAfter,
-                  CRAPS_PRIORITY,
-                  *ENABLED,
-                  |event: Option<&mut $event>, meta| {
-                          with_recorder(meta, |trace| {
-                              trace.record_event(event.expect("event should be available"))
-                          });
-                          DiceResult::Ok
-                  }
-              );
-          )*
-      };
+        $(
+            subscribe!(
+                Chain::CaptureAfter,
+                |event: Option<&mut $event>, meta| {
+                    with_recorder(meta, |recorder| {
+                        if let Some(recorder) = recorder.as_mut() {
+                            recorder
+                                .record_event(
+                                    event.expect(
+                                        "event should be available"
+                                    ),
+                                )
+                                .expect(
+                                    "recording should succeed"
+                                );
+                        }
+                    });
+
+                    DiceResult::Ok
+                }
+            );
+        )*
+    };
 }
 
 define_simple_handlers!(

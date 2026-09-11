@@ -28,16 +28,21 @@ dice-box = ["dice-rs/dice-box"]
 dice-cxa = ["dice-rs/dice-cxa"]
 dice-epoll = ["dice-rs/dice-epoll"]
 dice-eventfd = ["dice-rs/dice-eventfd"]
+dice-dirent = ["dice-rs/dice-dirent"]
 dice-fcntl = ["dice-rs/dice-fcntl"]
 dice-mman = ["dice-rs/dice-mman"]
 dice-poll = ["dice-rs/dice-poll"]
 dice-pthread_cond = ["dice-rs/dice-pthread_cond"]
 dice-pthread_create = ["dice-rs/dice-pthread_create"]
+dice-pthread_detach = ["dice-rs/dice-pthread_detach"]
+dice-pthread_key = ["dice-rs/dice-pthread_key"]
 dice-pthread_mutex = ["dice-rs/dice-pthread_mutex"]
 dice-pthread_once = ["dice-rs/dice-pthread_once"]
 dice-pthread_rwlock = ["dice-rs/dice-pthread_rwlock"]
 dice-self = ["dice-rs/dice-self"]
 dice-sem = ["dice-rs/dice-sem"]
+dice-stacktrace = ["dice-rs/dice-stacktrace"]
+dice-syscall = ["dice-rs/dice-syscall"]
 dice-tsan = ["dice-rs/dice-tsan"]
 dice-socket = ["dice-rs/dice-socket"]
 dice-time = ["dice-rs/dice-time"]
@@ -57,11 +62,6 @@ abomonation = [
     "dep:abomonation_derive",
 ]
 
-rkyv = [
-    "felt/rkyv",
-    "dep:rkyv",
-]
-
 [dependencies]
 dice-rs = { workspace = true }
 felt = { workspace = true }
@@ -71,4 +71,3 @@ libc = { workspace = true }
 serde = { workspace = true, optional = true }
 abomonation = { workspace = true, optional = true }
 abomonation_derive = { workspace = true, optional = true }
-rkyv = { workspace = true, optional = true }
