@@ -2,8 +2,8 @@
  * Copyright (C) 2025 Huawei Technologies Co., Ltd.
  * SPDX-License-Identifier: 0BSD
  */
-#ifndef DICE_PTHREAD_H
-#define DICE_PTHREAD_H
+#ifndef DICE_PTHREAD_EXT_H
+#define DICE_PTHREAD_EXT_H
 
 #include <pthread.h>
 

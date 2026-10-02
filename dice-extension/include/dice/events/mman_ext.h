@@ -2,8 +2,8 @@
  * Copyright (C) 2025 Huawei Technologies Co., Ltd.
  * SPDX-License-Identifier: 0BSD
  */
-#ifndef DICE_MMAN_H
-#define DICE_MMAN_H
+#ifndef DICE_MMAN_EXT_H
+#define DICE_MMAN_EXT_H
 
 #include <stddef.h>
 
@@ -32,4 +32,4 @@ struct mprotect_event {
     int (*func)(void *, size_t, int);
 };
 
-#endif /* DICE_MMAN_H */
+#endif /* DICE_MMAN_EXT_H */
