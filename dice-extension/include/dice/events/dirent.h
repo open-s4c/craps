@@ -18,6 +18,10 @@
 #define EVENT_REWINDDIR 272
 #define EVENT_SEEKDIR   273
 #define EVENT_TELLDIR   274
+#define EVENT_SCANDIR   281
+#define EVENT_SCANDIRAT 282
+#define EVENT_SCANDIR64   283
+#define EVENT_SCANDIRAT64 284
 
 struct closedir_event {
     const void *pc;
@@ -74,6 +78,98 @@ struct telldir_event {
     DIR *dirp;
     long ret;
     long(*func)(DIR *);
+};
+
+struct scandir_event {
+    const void *pc;
+    const char *dirp;
+    struct dirent ***namelist;
+    int (*filter)(const struct dirent *);
+    int (*compar)(
+        const struct dirent **,
+        const struct dirent **
+    );
+    int ret;
+    int errno_;
+    int (*func)(
+        const char *,
+        struct dirent ***,
+        int (*)(const struct dirent *),
+        int (*)(
+            const struct dirent **,
+            const struct dirent **
+        )
+    );
+};
+
+struct scandirat_event {
+    const void *pc;
+    int dirfd;
+    const char *dirp;
+    struct dirent ***namelist;
+    int (*filter)(const struct dirent *);
+    int (*compar)(
+        const struct dirent **,
+        const struct dirent **
+    );
+    int ret;
+    int errno_;
+    int (*func)(
+        int,
+        const char *,
+        struct dirent ***,
+        int (*)(const struct dirent *),
+        int (*)(
+            const struct dirent **,
+            const struct dirent **
+        )
+    );
+};
+
+struct scandir64_event {
+    const void *pc;
+    const char *dirp;
+    struct dirent64 ***namelist;
+    int (*filter)(const struct dirent64 *);
+    int (*compar)(
+        const struct dirent64 **,
+        const struct dirent64 **
+    );
+    int ret;
+    int errno_;
+    int (*func)(
+        const char *,
+        struct dirent64 ***,
+        int (*)(const struct dirent64 *),
+        int (*)(
+            const struct dirent64 **,
+            const struct dirent64 **
+        )
+    );
+};
+
+struct scandirat64_event {
+    const void *pc;
+    int dirfd;
+    const char *dirp;
+    struct dirent64 ***namelist;
+    int (*filter)(const struct dirent64 *);
+    int (*compar)(
+        const struct dirent64 **,
+        const struct dirent64 **
+    );
+    int ret;
+    int errno_;
+    int (*func)(
+        int,
+        const char *,
+        struct dirent64 ***,
+        int (*)(const struct dirent64 *),
+        int (*)(
+            const struct dirent64 **,
+            const struct dirent64 **
+        )
+    );
 };
 
 #endif /* DICE_DIRENT_H */

@@ -2,6 +2,7 @@
  * Copyright (C) 2026 Huawei Technologies Co., Ltd.
  * SPDX-License-Identifier: 0BSD
  */
+#include <errno.h>
 #include <dice/chains/intercept.h>
 #include <dice/events/dirent.h>
 #include <dice/interpose.h>
@@ -137,6 +138,226 @@ INTERPOSE(long, telldir, DIR *dirp)
     return ev.ret;
 }
 
+INTERPOSE(
+    int,
+    scandir,
+    const char *dirp,
+    struct dirent ***namelist,
+    int (*filter)(const struct dirent *),
+    int (*compar)(
+        const struct dirent **,
+        const struct dirent **
+    )
+)
+{
+    struct scandir_event ev = {
+        .pc       = INTERPOSE_PC,
+        .dirp     = dirp,
+        .namelist = namelist,
+        .filter   = filter,
+        .compar   = compar,
+        .ret      = 0,
+        .errno_   = 0,
+        .func     = REAL_FUNC(scandir),
+    };
+
+    metadata_t md = {0};
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_SCANDIR,
+        &ev,
+        &md
+    );
+
+    errno = 0;
+    ev.ret = ev.func(
+        ev.dirp,
+        ev.namelist,
+        ev.filter,
+        ev.compar
+    );
+    ev.errno_ = errno;
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_SCANDIR,
+        &ev,
+        &md
+    );
+
+    errno = ev.errno_;
+
+    return ev.ret;
+}
+
+
+INTERPOSE(
+    int,
+    scandirat,
+    int dirfd,
+    const char *dirp,
+    struct dirent ***namelist,
+    int (*filter)(const struct dirent *),
+    int (*compar)(
+        const struct dirent **,
+        const struct dirent **
+    )
+)
+{
+    struct scandirat_event ev = {
+        .pc       = INTERPOSE_PC,
+        .dirfd    = dirfd,
+        .dirp     = dirp,
+        .namelist = namelist,
+        .filter   = filter,
+        .compar   = compar,
+        .ret      = 0,
+        .errno_   = 0,
+        .func     = REAL_FUNC(scandirat),
+    };
+
+    metadata_t md = {0};
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_SCANDIRAT,
+        &ev,
+        &md
+    );
+
+    errno = 0;
+    ev.ret = ev.func(
+        ev.dirfd,
+        ev.dirp,
+        ev.namelist,
+        ev.filter,
+        ev.compar
+    );
+    ev.errno_ = errno;
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_SCANDIRAT,
+        &ev,
+        &md
+    );
+
+    errno = ev.errno_;
+
+    return ev.ret;
+}
+
+INTERPOSE(
+    int,
+    scandir64,
+    const char *dirp,
+    struct dirent64 ***namelist,
+    int (*filter)(const struct dirent64 *),
+    int (*compar)(
+        const struct dirent64 **,
+        const struct dirent64 **
+    )
+)
+{
+    struct scandir64_event ev = {
+        .pc       = INTERPOSE_PC,
+        .dirp     = dirp,
+        .namelist = namelist,
+        .filter   = filter,
+        .compar   = compar,
+        .ret      = 0,
+        .errno_   = 0,
+        .func     = REAL_FUNC(scandir64),
+    };
+
+    metadata_t md = {0};
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_SCANDIR64,
+        &ev,
+        &md
+    );
+
+    errno = 0;
+    ev.ret = ev.func(
+        ev.dirp,
+        ev.namelist,
+        ev.filter,
+        ev.compar
+    );
+    ev.errno_ = errno;
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_SCANDIR64,
+        &ev,
+        &md
+    );
+
+    errno = ev.errno_;
+
+    return ev.ret;
+}
+
+
+INTERPOSE(
+    int,
+    scandirat64,
+    int dirfd,
+    const char *dirp,
+    struct dirent64 ***namelist,
+    int (*filter)(const struct dirent64 *),
+    int (*compar)(
+        const struct dirent64 **,
+        const struct dirent64 **
+    )
+)
+{
+    struct scandirat64_event ev = {
+        .pc       = INTERPOSE_PC,
+        .dirfd    = dirfd,
+        .dirp     = dirp,
+        .namelist = namelist,
+        .filter   = filter,
+        .compar   = compar,
+        .ret      = 0,
+        .errno_   = 0,
+        .func     = REAL_FUNC(scandirat64),
+    };
+
+    metadata_t md = {0};
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_SCANDIRAT64,
+        &ev,
+        &md
+    );
+
+    errno = 0;
+    ev.ret = ev.func(
+        ev.dirfd,
+        ev.dirp,
+        ev.namelist,
+        ev.filter,
+        ev.compar
+    );
+    ev.errno_ = errno;
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_SCANDIRAT64,
+        &ev,
+        &md
+    );
+
+    errno = ev.errno_;
+
+    return ev.ret;
+}
+
 /* Advertise event types */
 PS_ADVERTISE_TYPE(EVENT_CLOSEDIR)
 PS_ADVERTISE_TYPE(EVENT_FDOPENDIR)
@@ -146,6 +367,10 @@ PS_ADVERTISE_TYPE(EVENT_READDIR_R)
 PS_ADVERTISE_TYPE(EVENT_REWINDDIR)
 PS_ADVERTISE_TYPE(EVENT_SEEKDIR)
 PS_ADVERTISE_TYPE(EVENT_TELLDIR)
+PS_ADVERTISE_TYPE(EVENT_SCANDIR)
+PS_ADVERTISE_TYPE(EVENT_SCANDIRAT)
+PS_ADVERTISE_TYPE(EVENT_SCANDIR64)
+PS_ADVERTISE_TYPE(EVENT_SCANDIRAT64)
 
 /* Module init (optional) */
 DICE_MODULE_INIT()

@@ -149,6 +149,19 @@ define_simple_before_handlers!(
     SendEvent,
     PpollEvent,
     TimeEvent,
+    /*
+    FeofEvent,
+    FerrorEvent,
+    FgetcEvent,
+    FgetposEvent,
+    FgetsEvent,
+    FputcEvent,
+    FputsEvent,
+    FreadEvent,
+    FseekEvent,
+    FsetposEvent,
+    FtellEvent,
+    FwriteEvent,*/
 );
 
 macro_rules! define_after_replay_handler {
@@ -715,5 +728,151 @@ define_after_replay_handler!(
                 );
             }
         }
+    }
+);
+
+define_ret_only_handler!(FeofEvent, FeofRecord);
+define_ret_only_handler!(FerrorEvent, FerrorRecord);
+define_ret_only_handler!(FgetcEvent, FgetcRecord);
+define_ret_only_handler!(FputcEvent, FputcRecord);
+define_ret_only_handler!(FputsEvent, FputsRecord);
+define_ret_only_handler!(FseekEvent, FseekRecord);
+define_ret_only_handler!(FsetposEvent, FsetposRecord);
+define_ret_only_handler!(FtellEvent, FtellRecord);
+define_ret_only_handler!(FwriteEvent, FwriteRecord);
+
+define_after_replay_handler!(
+    FgetposEvent,
+    FgetposRecord,
+    |event, record| {
+        event.ret = record.ret;
+        event.errno_ = record.errno;
+
+        if record.ret == 0 {
+            let bytes = record.pos.as_ref()
+                .expect(
+                    "successful fgetpos record has no position"
+                );
+
+            assert_eq!(
+                bytes.len(),
+                mem::size_of::<libc::fpos_t>()
+            );
+
+            assert!(
+                !event.pos.is_null(),
+                "fgetpos replay has null pos"
+            );
+
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    bytes.as_ptr(),
+                    event.pos.cast::<u8>(),
+                    bytes.len(),
+                );
+            }
+        }
+    }
+);
+
+define_after_replay_handler!(
+    FgetsEvent,
+    FgetsRecord,
+    |event, record| {
+        event.errno_ = record.errno;
+
+        assert_eq!(
+            event.size,
+            record.size,
+            "fgets buffer size mismatch"
+        );
+
+        if record.success {
+            assert!(
+                !event.s.is_null(),
+                "fgets replay has null buffer"
+            );
+
+            assert!(
+                !record.buf.is_empty(),
+                "successful fgets record is empty"
+            );
+
+            assert!(
+                record.buf.len() <= event.size as usize
+            );
+
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    record.buf.as_ptr(),
+                    event.s.cast::<u8>(),
+                    record.buf.len(),
+                );
+            }
+
+            // Return the current caller's buffer,
+            // not the original recorded pointer.
+            event.ret = event.s;
+        } else {
+            assert!(
+                record.buf.is_empty(),
+                "failed fgets record has output"
+            );
+
+            event.ret = ptr::null_mut();
+        }
+    }
+);
+
+define_after_replay_handler!(
+    FreadEvent,
+    FreadRecord,
+    |event, record| {
+        assert_eq!(
+            event.size,
+            record.size,
+            "fread element size mismatch"
+        );
+
+        assert_eq!(
+            event.n,
+            record.n,
+            "fread element count mismatch"
+        );
+
+        assert!(
+            record.ret <= record.n,
+            "fread record returns too many elements"
+        );
+
+        let len = record.ret
+            .checked_mul(record.size)
+            .expect(
+                "fread replay byte count overflow"
+            );
+
+        assert_eq!(
+            record.buf.len(),
+            len,
+            "bad fread record length"
+        );
+
+        if len != 0 {
+            assert!(
+                !event.ptr.is_null(),
+                "fread replay has null ptr"
+            );
+
+            unsafe {
+                ptr::copy_nonoverlapping(
+                    record.buf.as_ptr(),
+                    event.ptr.cast::<u8>(),
+                    len,
+                );
+            }
+        }
+
+        event.ret = record.ret;
+        event.errno_ = record.errno;
     }
 );

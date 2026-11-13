@@ -15,6 +15,7 @@
 #define EVENT_FCNTL           130
 #define EVENT_OPEN            131
 #define EVENT_OPENAT          132
+#define EVENT_OPENAT64        280
 #define EVENT_POSIX_FADVISE   133
 #define EVENT_POSIX_FALLOCATE 134
 #define EVENT_OPEN64          266
@@ -46,6 +47,16 @@ struct open_event {
 };
 
 struct openat_event {
+    const void *pc;
+    int dirfd;
+    const char *path;
+    int flags;
+    mode_t mode;
+    int ret;
+    int(*func)(int, const char *, int, ...);
+};
+
+struct openat64_event {
     const void *pc;
     int dirfd;
     const char *path;

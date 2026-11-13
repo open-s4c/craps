@@ -80,6 +80,18 @@ record_type! {
         MmapRecord(MmapRecord),
         RecvRecord(RecvRecord),
         SendRecord(SendRecord),
+        FeofRecord(FeofRecord),
+        FerrorRecord(FerrorRecord),
+        FgetcRecord(FgetcRecord),
+        FgetposRecord(FgetposRecord),
+        FgetsRecord(FgetsRecord),
+        FputcRecord(FputcRecord),
+        FputsRecord(FputsRecord),
+        FreadRecord(FreadRecord),
+        FseekRecord(FseekRecord),
+        FsetposRecord(FsetposRecord),
+        FtellRecord(FtellRecord),
+        FwriteRecord(FwriteRecord),
         /// time
         GettimeofdayRecord(GettimeofdayRecord),
         ClockGettimeRecord(ClockGettimeRecord),
@@ -1159,6 +1171,171 @@ impl ToRecordEnum for TimeEvent {
     fn to_record(&self) -> Option<RecordEnum> {
         Some(RecordEnum::TimeRecord(TimeRecord {
             ret: self.ret,
+        }))
+    }
+}
+
+// stdio
+
+macro_rules! stdio_scalar_record {
+    ($record:ident, $event:ty, $ret_ty:ty) => {
+        record_type! {
+            pub(crate) struct $record {
+                pub ret: $ret_ty,
+                pub errno: libc::c_int,
+            }
+        }
+
+        impl ToRecordEnum for $event {
+            fn to_record(&self) -> Option<RecordEnum> {
+                Some(RecordEnum::$record($record {
+                    ret: self.ret,
+                    errno: self.errno_,
+                }))
+            }
+        }
+    };
+}
+
+stdio_scalar_record!(FeofRecord, FeofEvent, libc::c_int);
+stdio_scalar_record!(FerrorRecord, FerrorEvent, libc::c_int);
+stdio_scalar_record!(FgetcRecord, FgetcEvent, libc::c_int);
+stdio_scalar_record!(FputcRecord, FputcEvent, libc::c_int);
+stdio_scalar_record!(FputsRecord, FputsEvent, libc::c_int);
+stdio_scalar_record!(FseekRecord, FseekEvent, libc::c_int);
+stdio_scalar_record!(FsetposRecord, FsetposEvent, libc::c_int);
+stdio_scalar_record!(FtellRecord, FtellEvent, libc::c_long);
+stdio_scalar_record!(FwriteRecord, FwriteEvent, libc::size_t);
+
+record_type! {
+    pub(crate) struct FgetposRecord {
+        pub pos: Option<Vec<u8>>,
+        pub ret: libc::c_int,
+        pub errno: libc::c_int,
+    }
+}
+
+impl ToRecordEnum for FgetposEvent {
+    fn to_record(&self) -> Option<RecordEnum> {
+        let pos = if self.ret == 0 {
+            assert!(
+                !self.pos.is_null(),
+                "fgetpos succeeded with null pos"
+            );
+
+            Some(unsafe {
+                slice::from_raw_parts(
+                    self.pos.cast::<u8>(),
+                    std::mem::size_of::<libc::fpos_t>(),
+                )
+                    .to_vec()
+            })
+        } else {
+            None
+        };
+
+        Some(RecordEnum::FgetposRecord(FgetposRecord {
+            pos,
+            ret: self.ret,
+            errno: self.errno_,
+        }))
+    }
+}
+
+record_type! {
+    pub(crate) struct FgetsRecord {
+        pub success: bool,
+        pub buf: Vec<u8>,
+        pub size: libc::c_int,
+        pub errno: libc::c_int,
+    }
+}
+
+impl ToRecordEnum for FgetsEvent {
+    fn to_record(&self) -> Option<RecordEnum> {
+        let success = !self.ret.is_null();
+
+        let buf = if success {
+            assert!(
+                self.size > 0,
+                "successful fgets needs positive size"
+            );
+            assert!(
+                !self.s.is_null(),
+                "successful fgets needs a buffer"
+            );
+            assert_eq!(
+                self.ret,
+                self.s,
+                "fgets returned a different buffer"
+            );
+
+            let buf = unsafe {
+                CStr::from_ptr(self.s)
+            }
+                .to_bytes_with_nul()
+                .to_vec();
+
+            assert!(buf.len() <= self.size as usize);
+
+            buf
+        } else {
+            Vec::new()
+        };
+
+        Some(RecordEnum::FgetsRecord(FgetsRecord {
+            success,
+            buf,
+            size: self.size,
+            errno: self.errno_,
+        }))
+    }
+}
+
+record_type! {
+    pub(crate) struct FreadRecord {
+        pub buf: Vec<u8>,
+        pub size: libc::size_t,
+        pub n: libc::size_t,
+        pub ret: libc::size_t,
+        pub errno: libc::c_int,
+    }
+}
+
+impl ToRecordEnum for FreadEvent {
+    fn to_record(&self) -> Option<RecordEnum> {
+        assert!(
+            self.ret <= self.n,
+            "fread returned too many elements"
+        );
+
+        let len = self.ret
+            .checked_mul(self.size)
+            .expect("fread result byte count overflowed");
+
+        let buf = if len == 0 {
+            Vec::new()
+        } else {
+            assert!(
+                !self.ptr.is_null(),
+                "fread returned data with null ptr"
+            );
+
+            unsafe {
+                slice::from_raw_parts(
+                    self.ptr.cast::<u8>(),
+                    len,
+                )
+                    .to_vec()
+            }
+        };
+
+        Some(RecordEnum::FreadRecord(FreadRecord {
+            buf,
+            size: self.size,
+            n: self.n,
+            ret: self.ret,
+            errno: self.errno_,
         }))
     }
 }
