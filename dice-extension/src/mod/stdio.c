@@ -224,6 +224,28 @@ INTERPOSE(FILE *, fopen, const char *restrict path, const char *restrict mode)
     return ev.ret;
 }
 
+INTERPOSE(FILE *, fopen64, const char *restrict path, const char *restrict mode)
+{
+    int saved_errno = errno;
+    struct fopen64_event ev = {
+        .pc      = INTERPOSE_PC,
+        .path    = path,
+        .mode    = mode,
+        .ret     = NULL,
+        .errno_  = saved_errno,
+        .func    = REAL_FUNC(fopen64),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FOPEN64, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.path, ev.mode);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FOPEN64, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+
 INTERPOSE(int, fputc, int c, FILE *stream)
 {
     int saved_errno = errno;
@@ -804,6 +826,7 @@ PS_ADVERTISE_TYPE(EVENT_FGETC)
 PS_ADVERTISE_TYPE(EVENT_FGETPOS)
 PS_ADVERTISE_TYPE(EVENT_FGETS)
 PS_ADVERTISE_TYPE(EVENT_FOPEN)
+PS_ADVERTISE_TYPE(EVENT_FOPEN64)
 PS_ADVERTISE_TYPE(EVENT_FPUTC)
 PS_ADVERTISE_TYPE(EVENT_FPUTS)
 PS_ADVERTISE_TYPE(EVENT_FREAD)

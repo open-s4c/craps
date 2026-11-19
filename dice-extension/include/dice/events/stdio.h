@@ -16,6 +16,7 @@
 #define EVENT_FGETPOS      291
 #define EVENT_FGETS        292
 #define EVENT_FOPEN        293
+#define EVENT_FOPEN64      320
 #define EVENT_FPUTC        294
 #define EVENT_FPUTS        295
 #define EVENT_FREAD        296
@@ -110,6 +111,15 @@ struct fgets_event {
 };
 
 struct fopen_event {
+    const void *pc;
+    const char *path;
+    const char *mode;
+    FILE *ret;
+    int errno_;
+    FILE *(*func)(const char *, const char *);
+};
+
+struct fopen64_event {
     const void *pc;
     const char *path;
     const char *mode;

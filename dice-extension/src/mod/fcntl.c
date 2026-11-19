@@ -10,6 +10,36 @@
 #include <dice/pubsub.h>
 #include <stdarg.h>
 
+#if defined(__GLIBC__)
+/*
+ * Fortified glibc entry points used by _FORTIFY_SOURCE.
+ *
+ * These are the two/three-argument variants, so there is no mode argument.
+ */
+extern int __open_2(
+    const char *path,
+    int flags
+);
+
+extern int __open64_2(
+    const char *path,
+    int flags
+);
+
+extern int __openat_2(
+    int dirfd,
+    const char *path,
+    int flags
+);
+
+extern int __openat64_2(
+    int dirfd,
+    const char *path,
+    int flags
+);
+#endif
+
+
 INTERPOSE(int, creat, const char *path, mode_t mode)
 {
     struct creat_event ev = {
@@ -19,24 +49,46 @@ INTERPOSE(int, creat, const char *path, mode_t mode)
         .ret  = 0,
         .func = REAL_FUNC(creat),
     };
+
     metadata_t md = {0};
-    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_CREAT, &ev, &md);
-    ev.ret = ev.func(ev.path, ev.mode);
-    PS_PUBLISH(INTERCEPT_AFTER, EVENT_CREAT, &ev, &md);
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_CREAT,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.path,
+        ev.mode
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_CREAT,
+        &ev,
+        &md
+    );
+
     return ev.ret;
 }
+
 
 INTERPOSE(int, fcntl, int fd, int cmd, ...)
 {
     uint64_t arg;
+
     va_list ap;
     va_start(ap, cmd);
+
     switch (cmd) {
         case F_GETFD:
         case F_GETFL:
         case F_SETFD:
         case F_SETFL:
         case F_SETOWN:
+
 #if !(defined(__NetBSD__) || defined(__APPLE__))
         case F_DUPFD:
         case F_DUPFD_CLOEXEC:
@@ -45,8 +97,12 @@ INTERPOSE(int, fcntl, int fd, int cmd, ...)
         case F_ADD_SEALS:
         case F_SETPIPE_SZ:
 #endif
-            arg = va_arg(ap, int);
+            arg = va_arg(
+                ap,
+                int
+            );
             break;
+
 #if !(defined(__NetBSD__) || defined(__APPLE__))
         case F_GETLK:
         case F_SETLK:
@@ -54,24 +110,44 @@ INTERPOSE(int, fcntl, int fd, int cmd, ...)
         case F_OFD_GETLK:
         case F_OFD_SETLK:
         case F_OFD_SETLKW:
-            arg = (uint64_t)(uintptr_t)va_arg(ap, struct flock *);
+            arg =
+                (uint64_t)(uintptr_t)
+                    va_arg(
+                        ap,
+                        struct flock *
+                    );
             break;
+
         case F_GETOWN_EX:
         case F_SETOWN_EX:
-             arg = (uint64_t)(uintptr_t)va_arg(ap, struct f_owner_ex *);
-             break;
+            arg =
+                (uint64_t)(uintptr_t)
+                    va_arg(
+                        ap,
+                        struct f_owner_ex *
+                    );
+            break;
+
         case F_GET_RW_HINT:
         case F_SET_RW_HINT:
         case F_GET_FILE_RW_HINT:
         case F_SET_FILE_RW_HINT:
-            arg = va_arg(ap, uint64_t);
+            arg = va_arg(
+                ap,
+                uint64_t
+            );
             break;
 #endif
+
         default:
-            assert(0 && "Unsupported fcntl command");
+            assert(
+                0
+                && "Unsupported fcntl command"
+            );
             arg = 0;
             break;
     }
+
     va_end(ap);
 
     struct fcntl_event ev = {
@@ -84,27 +160,59 @@ INTERPOSE(int, fcntl, int fd, int cmd, ...)
     };
 
     metadata_t md = {0};
-    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FCNTL, &ev, &md);
-    ev.ret = ev.func(ev.fd, ev.cmd, ev.arg);
-    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FCNTL, &ev, &md);
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_FCNTL,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.fd,
+        ev.cmd,
+        ev.arg
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_FCNTL,
+        &ev,
+        &md
+    );
+
     return ev.ret;
 }
+
 
 INTERPOSE(int, open, const char *path, int flags, ...)
 {
     va_list ap;
     mode_t mode = 0;
+
 #if defined(__NetBSD__) || defined(__APPLE__)
     if (flags & O_CREAT) {
 #else
-    if ((flags & O_CREAT) || (flags & O_TMPFILE)) {
+    if ((flags & O_CREAT)
+        || (flags & O_TMPFILE))
+    {
 #endif
         va_start(ap, flags);
+
 #ifdef __APPLE__
-        mode = (mode_t)va_arg(ap, int);
+        mode =
+            (mode_t)va_arg(
+                ap,
+                int
+            );
 #else
-        mode = va_arg(ap, mode_t);
+        mode =
+            va_arg(
+                ap,
+                mode_t
+            );
 #endif
+
         va_end(ap);
     }
 
@@ -118,27 +226,121 @@ INTERPOSE(int, open, const char *path, int flags, ...)
     };
 
     metadata_t md = {0};
-    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_OPEN, &ev, &md);
-    ev.ret = ev.func(ev.path, ev.flags, ev.mode);
-    PS_PUBLISH(INTERCEPT_AFTER, EVENT_OPEN, &ev, &md);
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_OPEN,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.path,
+        ev.flags,
+        ev.mode
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_OPEN,
+        &ev,
+        &md
+    );
+
     return ev.ret;
 }
 
-INTERPOSE(int, openat, int dirfd, const char *path, int flags, ...)
+
+#if defined(__GLIBC__)
+INTERPOSE(
+    int,
+    __open_2,
+    const char *path,
+    int flags
+)
+{
+    /*
+     * Reuse OpenEvent.  __open_2 has no mode argument, so mode is always 0.
+     *
+     * The cast is necessary because open_event::func has the variadic
+     * signature of open(), while __open_2 itself has exactly two arguments.
+     */
+    struct open_event ev = {
+        .pc    = INTERPOSE_PC,
+        .path  = path,
+        .flags = flags,
+        .mode  = 0,
+        .ret   = 0,
+        .func  =
+            (int (*)(
+                const char *,
+                int,
+                ...
+            ))
+            REAL_FUNC(__open_2),
+    };
+
+    metadata_t md = {0};
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_OPEN,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.path,
+        ev.flags
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_OPEN,
+        &ev,
+        &md
+    );
+
+    return ev.ret;
+}
+#endif
+
+
+INTERPOSE(
+    int,
+    openat,
+    int dirfd,
+    const char *path,
+    int flags,
+    ...
+)
 {
     va_list ap;
     mode_t mode = 0;
+
 #if defined(__NetBSD__) || defined(__APPLE__)
     if (flags & O_CREAT) {
 #else
-    if ((flags & O_CREAT) || (flags & O_TMPFILE)) {
+    if ((flags & O_CREAT)
+        || (flags & O_TMPFILE))
+    {
 #endif
         va_start(ap, flags);
+
 #ifdef __APPLE__
-        mode = (mode_t)va_arg(ap, int);
+        mode =
+            (mode_t)va_arg(
+                ap,
+                int
+            );
 #else
-        mode = va_arg(ap, mode_t);
+        mode =
+            va_arg(
+                ap,
+                mode_t
+            );
 #endif
+
         va_end(ap);
     }
 
@@ -153,27 +355,120 @@ INTERPOSE(int, openat, int dirfd, const char *path, int flags, ...)
     };
 
     metadata_t md = {0};
-    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_OPENAT, &ev, &md);
-    ev.ret = ev.func(ev.dirfd, ev.path, ev.flags, ev.mode);
-    PS_PUBLISH(INTERCEPT_AFTER, EVENT_OPENAT, &ev, &md);
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_OPENAT,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.dirfd,
+        ev.path,
+        ev.flags,
+        ev.mode
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_OPENAT,
+        &ev,
+        &md
+    );
+
     return ev.ret;
 }
 
-INTERPOSE(int, openat64, int dirfd, const char *path, int flags, ...)
+
+#if defined(__GLIBC__)
+INTERPOSE(
+    int,
+    __openat_2,
+    int dirfd,
+    const char *path,
+    int flags
+)
+{
+    struct openat_event ev = {
+        .pc     = INTERPOSE_PC,
+        .dirfd  = dirfd,
+        .path   = path,
+        .flags  = flags,
+        .mode   = 0,
+        .ret    = 0,
+        .func   =
+            (int (*)(
+                int,
+                const char *,
+                int,
+                ...
+            ))
+            REAL_FUNC(__openat_2),
+    };
+
+    metadata_t md = {0};
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_OPENAT,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.dirfd,
+        ev.path,
+        ev.flags
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_OPENAT,
+        &ev,
+        &md
+    );
+
+    return ev.ret;
+}
+#endif
+
+
+INTERPOSE(
+    int,
+    openat64,
+    int dirfd,
+    const char *path,
+    int flags,
+    ...
+)
 {
     va_list ap;
     mode_t mode = 0;
+
 #if defined(__NetBSD__) || defined(__APPLE__)
     if (flags & O_CREAT) {
 #else
-    if ((flags & O_CREAT) || (flags & O_TMPFILE)) {
+    if ((flags & O_CREAT)
+        || (flags & O_TMPFILE))
+    {
 #endif
         va_start(ap, flags);
+
 #ifdef __APPLE__
-        mode = (mode_t)va_arg(ap, int);
+        mode =
+            (mode_t)va_arg(
+                ap,
+                int
+            );
 #else
-        mode = va_arg(ap, mode_t);
+        mode =
+            va_arg(
+                ap,
+                mode_t
+            );
 #endif
+
         va_end(ap);
     }
 
@@ -188,14 +483,94 @@ INTERPOSE(int, openat64, int dirfd, const char *path, int flags, ...)
     };
 
     metadata_t md = {0};
-    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_OPENAT64, &ev, &md);
-    ev.ret = ev.func(ev.dirfd, ev.path, ev.flags, ev.mode);
-    PS_PUBLISH(INTERCEPT_AFTER, EVENT_OPENAT64, &ev, &md);
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_OPENAT64,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.dirfd,
+        ev.path,
+        ev.flags,
+        ev.mode
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_OPENAT64,
+        &ev,
+        &md
+    );
+
     return ev.ret;
 }
 
+
+#if defined(__GLIBC__)
+INTERPOSE(
+    int,
+    __openat64_2,
+    int dirfd,
+    const char *path,
+    int flags
+)
+{
+    struct openat64_event ev = {
+        .pc     = INTERPOSE_PC,
+        .dirfd  = dirfd,
+        .path   = path,
+        .flags  = flags,
+        .mode   = 0,
+        .ret    = 0,
+        .func   =
+            (int (*)(
+                int,
+                const char *,
+                int,
+                ...
+            ))
+            REAL_FUNC(__openat64_2),
+    };
+
+    metadata_t md = {0};
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_OPENAT64,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.dirfd,
+        ev.path,
+        ev.flags
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_OPENAT64,
+        &ev,
+        &md
+    );
+
+    return ev.ret;
+}
+#endif
+
+
 #if !defined(__APPLE__)
-INTERPOSE(int, posix_fadvise, int fd, off_t offset, off_t size, int advice)
+INTERPOSE(
+    int,
+    posix_fadvise,
+    int fd,
+    off_t offset,
+    off_t size,
+    int advice
+)
 {
     struct posix_fadvise_event ev = {
         .pc     = INTERPOSE_PC,
@@ -208,13 +583,39 @@ INTERPOSE(int, posix_fadvise, int fd, off_t offset, off_t size, int advice)
     };
 
     metadata_t md = {0};
-    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_POSIX_FADVISE, &ev, &md);
-    ev.ret = ev.func(ev.fd, ev.offset, ev.size, ev.advice);
-    PS_PUBLISH(INTERCEPT_AFTER, EVENT_POSIX_FADVISE, &ev, &md);
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_POSIX_FADVISE,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.fd,
+        ev.offset,
+        ev.size,
+        ev.advice
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_POSIX_FADVISE,
+        &ev,
+        &md
+    );
+
     return ev.ret;
 }
 
-INTERPOSE(int, posix_fallocate, int fd, off_t offset, off_t size)
+
+INTERPOSE(
+    int,
+    posix_fallocate,
+    int fd,
+    off_t offset,
+    off_t size
+)
 {
     struct posix_fallocate_event ev = {
         .pc     = INTERPOSE_PC,
@@ -224,13 +625,33 @@ INTERPOSE(int, posix_fallocate, int fd, off_t offset, off_t size)
         .ret    = 0,
         .func   = REAL_FUNC(posix_fallocate),
     };
+
     metadata_t md = {0};
-    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_POSIX_FALLOCATE, &ev, &md);
-    ev.ret = ev.func(ev.fd, ev.offset, ev.size);
-    PS_PUBLISH(INTERCEPT_AFTER, EVENT_POSIX_FALLOCATE, &ev, &md);
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_POSIX_FALLOCATE,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.fd,
+        ev.offset,
+        ev.size
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_POSIX_FALLOCATE,
+        &ev,
+        &md
+    );
+
     return ev.ret;
 }
 #endif
+
 
 INTERPOSE(int, open64, const char *path, int flags, ...)
 {
@@ -240,14 +661,26 @@ INTERPOSE(int, open64, const char *path, int flags, ...)
 #if defined(__NetBSD__) || defined(__APPLE__)
     if (flags & O_CREAT) {
 #else
-    if ((flags & O_CREAT) || (flags & O_TMPFILE)) {
+    if ((flags & O_CREAT)
+        || (flags & O_TMPFILE))
+    {
 #endif
         va_start(ap, flags);
+
 #ifdef __APPLE__
-        mode = (mode_t)va_arg(ap, int);
+        mode =
+            (mode_t)va_arg(
+                ap,
+                int
+            );
 #else
-        mode = va_arg(ap, mode_t);
+        mode =
+            va_arg(
+                ap,
+                mode_t
+            );
 #endif
+
         va_end(ap);
     }
 
@@ -262,14 +695,78 @@ INTERPOSE(int, open64, const char *path, int flags, ...)
 
     metadata_t md = {0};
 
-    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_OPEN64, &ev, &md);
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_OPEN64,
+        &ev,
+        &md
+    );
 
-    ev.ret = ev.func(ev.path, ev.flags, ev.mode);
+    ev.ret = ev.func(
+        ev.path,
+        ev.flags,
+        ev.mode
+    );
 
-    PS_PUBLISH(INTERCEPT_AFTER, EVENT_OPEN64, &ev, &md);
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_OPEN64,
+        &ev,
+        &md
+    );
 
     return ev.ret;
 }
+
+
+#if defined(__GLIBC__)
+INTERPOSE(
+    int,
+    __open64_2,
+    const char *path,
+    int flags
+)
+{
+    struct open64_event ev = {
+        .pc    = INTERPOSE_PC,
+        .path  = path,
+        .flags = flags,
+        .mode  = 0,
+        .ret   = 0,
+        .func  =
+            (int (*)(
+                const char *,
+                int,
+                ...
+            ))
+            REAL_FUNC(__open64_2),
+    };
+
+    metadata_t md = {0};
+
+    PS_PUBLISH(
+        INTERCEPT_BEFORE,
+        EVENT_OPEN64,
+        &ev,
+        &md
+    );
+
+    ev.ret = ev.func(
+        ev.path,
+        ev.flags
+    );
+
+    PS_PUBLISH(
+        INTERCEPT_AFTER,
+        EVENT_OPEN64,
+        &ev,
+        &md
+    );
+
+    return ev.ret;
+}
+#endif
+
 
 /* Advertise event types */
 PS_ADVERTISE_TYPE(EVENT_CREAT)

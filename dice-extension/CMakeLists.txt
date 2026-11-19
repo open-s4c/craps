@@ -30,6 +30,7 @@ endfunction()
 
 add_event_module(dirent)
 add_event_module(fcntl)
+add_event_module(ioctl)
 add_event_module(mman_ext)
 add_event_module(poll)
 add_event_module(pthread_detach)
