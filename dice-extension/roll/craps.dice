@@ -1,0 +1,38 @@
+; Single Dice Roll configuration used by Craps and dice-rs.
+; Preserve the original trace event numbers from ids.dice.
+(include "ids.dice")
+
+; Import all supported built-in modules. Actual compiled modules are selected
+; through Cargo features and DICE_MODULES; callbacks remain enabled.
+(import (dice self))
+(import (dice pthread_create))
+(import (dice malloc))
+(import (dice memcpy))
+(import (dice mman))
+(import (dice pthread_cond))
+(import (dice pthread_mutex))
+(import (dice pthread_rwlock))
+(import (dice sem))
+(import (dice box))
+(import (dice cxa))
+(import (dice tsan))
+(import (dice stacktrace))
+
+; External C modules, each with a single matching Roll slot.
+(import (dice dirent))
+(import (dice epoll))
+(import (dice eventfd))
+(import (dice fcntl))
+(import (dice ioctl))
+(import (dice mman_ext))
+(import (dice poll))
+(import (dice pthread_detach))
+(import (dice pthread_key))
+(import (dice pthread_once))
+(import (dice random))
+(import (dice socket))
+(import (dice stdio))
+(import (dice syscall))
+(import (dice time))
+(import (dice uio))
+(import (dice unistd))
