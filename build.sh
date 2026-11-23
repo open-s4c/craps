@@ -18,9 +18,11 @@ export CRAPS_PRIORITY="${CRAPS_PRIORITY:-9000}"
 export CRAPS_INIT_PRIORITY="${CRAPS_INIT_PRIORITY:-8999}"
 
 cargo build --release --features "log-debug dice dice-pthread_create dice-self dice-malloc"
-rm -f libcraps_recorder.so
-gcc -O3 -shared -o libcraps_recorder.so \
-    -Wl,--whole-archive target/release/libcraps_recorder.a -Wl,--no-whole-archive
-rm -f libcraps_replayer.so
-gcc -O3 -shared -o libcraps_replayer.so \
-    -Wl,--whole-archive target/release/libcraps_replayer.a -Wl,--no-whole-archive
+# The workspace currently defines one Craps static library (libcraps.a).
+# Runtime mode selects record or replay; keep the old .so names as aliases.
+for output in libcraps_recorder.so libcraps_replayer.so; do
+    rm -f "$output"
+    gcc -O3 -shared -o "$output" \
+        -Wl,--whole-archive target/release/libcraps.a -Wl,--no-whole-archive \
+        -ldl -lpthread -lm
+done
