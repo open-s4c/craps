@@ -7,9 +7,6 @@
 
 #include <sys/eventfd.h>
 
-#ifndef DICE_ROLLED
-#define EVENT_EVENTFD 128
-#endif
 
 struct eventfd_event {
     const void *pc;

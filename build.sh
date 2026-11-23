@@ -1,13 +1,12 @@
 #!/bin/sh
 set -eu
 
-# Keep the new Roll runtime explicit while preserving the original build
-# environment for record/replay testing. Use absolute paths for the generator.
+# Dice Roll is the only runtime build: C and Rust both consume the generated
+# configuration. No fixed extension IDs or legacy dispatch tables.
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 export DICE_EXTENSION_DIRS="$ROOT/dice-extension"
 export DICE_ROLL_CONFIG="$ROOT/dice-extension/roll/craps.dice"
 export DICE_ROLL_IMPORT_PATHS="dice=$ROOT/dice-extension/roll"
-export DICE_MAX_TYPES=322
 export DICE_MODULES="dirent;fcntl;ioctl;mman_ext;poll;pthread_detach;pthread_key;pthread_once;socket;stdio;time;uio;unistd;syscall"
 if [ "$(uname -s)" = Linux ]; then
     DICE_MODULES="$DICE_MODULES;eventfd;random;epoll"

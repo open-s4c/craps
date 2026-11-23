@@ -7,9 +7,6 @@
 
 #include <sys/random.h>
 
-#ifndef DICE_ROLLED
-#define EVENT_GETRANDOM   262
-#endif
 
 struct getrandom_event {
     const void *pc;

@@ -9,27 +9,6 @@
 
 #include <dice/events/thread.h>
 
-#ifndef DICE_ROLLED
-#define EVENT_BEFORE_PTHREAD_ONCE 264
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_AFTER_PTHREAD_ONCE  265
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_PTHREAD_KEY_CREATE   275
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_PTHREAD_KEY_DELETE   276
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_PTHREAD_SETSPECIFIC  277
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_PTHREAD_GETSPECIFIC  278
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_PTHREAD_DETACH       279
-#endif
 
 struct before_pthread_once_event {
     const void *pc;
