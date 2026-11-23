@@ -11,8 +11,12 @@
 #include <poll.h>
 #include <signal.h>
 
+#ifndef DICE_ROLLED
 #define EVENT_POLL 103
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PPOLL 263
+#endif
 
 struct poll_event {
     const void *pc;

@@ -7,42 +7,114 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#ifndef DICE_ROLLED
 #define EVENT_CLEARERR     285
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FCLOSE       286
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FEOF         287
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FERROR       288
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FFLUSH       289
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FGETC        290
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FGETPOS      291
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FGETS        292
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FOPEN        293
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FOPEN64      320
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FPUTC        294
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FPUTS        295
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FREAD        296
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FREOPEN      297
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FSEEK        298
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FSETPOS      299
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FTELL        300
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FWRITE       301
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETC         302
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETCHAR      303
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PERROR       304
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PUTC         305
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PUTCHAR      306
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PUTS         307
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_REMOVE       308
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_RENAME       309
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_REWIND       310
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETBUF       311
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETVBUF      312
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_TMPFILE      313
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_TMPNAM       314
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_UNGETC       315
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_VFPRINTF     316
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_VPRINTF      317
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_VSNPRINTF    318
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_VSPRINTF     319
+#endif
 
 struct clearerr_event {
     const void *pc;

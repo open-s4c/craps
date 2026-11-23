@@ -11,14 +11,30 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
+#ifndef DICE_ROLLED
 #define EVENT_CREAT           129
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FCNTL           130
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_OPEN            131
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_OPENAT          132
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_OPENAT64        280
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_POSIX_FADVISE   133
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_POSIX_FALLOCATE 134
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_OPEN64          266
+#endif
 
 struct creat_event {
     const void *pc;

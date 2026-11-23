@@ -7,12 +7,24 @@
 
 #include <sys/epoll.h>
 
+#ifndef DICE_ROLLED
 #define EVENT_EPOLL_CREATE  122
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_EPOLL_CREATE1 123
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_EPOLL_CTL     124
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_EPOLL_WAIT    125
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_EPOLL_PWAIT   126
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_EPOLL_PWAIT2  127
+#endif
 
 struct epoll_create_event {
     const void *pc;
