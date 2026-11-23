@@ -25,6 +25,10 @@ san-undefined = ["dice-rs/san-undefined"]
 # Dice modules
 dice = ["dice-rs/dice"]
 dice-box = ["dice-rs/dice-box"]
+dice-malloc = ["dice-rs/dice-malloc"]
+# External interceptor modules are selected via DICE_MODULES.
+dice-poll = ["dice"]
+dice-random = ["dice"]
 dice-cxa = ["dice-rs/dice-cxa"]
 dice-mman = ["dice-rs/dice-mman"]
 dice-pthread_cond = ["dice-rs/dice-pthread_cond"]
