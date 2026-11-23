@@ -1,0 +1,34 @@
+name: Build Craps with Dice Roll
+
+on:
+  pull_request:
+  push:
+    branches:
+      - roll-integration
+
+jobs:
+  roll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install native build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang libclang-dev pkg-config
+      - name: Check Roll module configuration
+        run: |
+          cmake -S dice-rs/dice -B /tmp/dice-roll-check \
+            -DDICE_TESTS=OFF -DDICE_BENCHMARKS=OFF -DDICE_LTO=OFF
+          cmake --build /tmp/dice-roll-check --target dice-cli -j 2
+          /tmp/dice-roll-check/src/cli/dice-roll \
+            -I "dice=$PWD/dice-extension/roll" \
+            --check dice-extension/roll/craps.dice
+          /tmp/dice-roll-check/src/cli/dice-roll \
+            -I "dice=$PWD/dice-extension/roll" \
+            --query dice-extension/roll/craps.dice > /tmp/roll-query.txt
+          test "$(grep -c '^event EVENT_' /tmp/roll-query.txt)" -gt 100
+      - name: Build the configured recorder/replayer
+        run: ./build.sh
