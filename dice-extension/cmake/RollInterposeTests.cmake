@@ -104,12 +104,11 @@ function(craps_roll_add_interpose_test MODULE)
     target_link_libraries("${target}" PRIVATE ${LIBSAN_LINK})
   endif()
 
-  # Use the same Dice preload wrapper as the old interpose tests, now with
-  # the generated runtime instead of the legacy dice-<module> library.
+  # This test executable already links the single generated module runtime.
+  # Run it directly: legacy scripts preload libdice.so and can cause early
+  # unistd interception inside the shell before main().
   add_test(NAME "craps-roll-interpose-${MODULE}"
-    COMMAND ${DICE_SCRIPT}
-      -preload "$<TARGET_FILE:${runtime}>"
-      "$<TARGET_FILE:${target}>")
+    COMMAND "$<TARGET_FILE:${target}>")
   set_tests_properties("craps-roll-interpose-${MODULE}" PROPERTIES TIMEOUT 20)
   add_dependencies(craps-roll-interpose-tests "${target}")
 endfunction()
