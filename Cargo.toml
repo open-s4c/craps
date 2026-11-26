@@ -16,3 +16,4 @@ felt = { path = "felt" }
 lazy_static = "1.5"
 abomonation = "0.7"
 abomonation_derive = "0.5"
+memmap2 = "0.9"
