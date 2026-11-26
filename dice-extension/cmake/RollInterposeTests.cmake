@@ -110,6 +110,6 @@ function(craps_roll_add_interpose_test MODULE)
     COMMAND ${DICE_SCRIPT}
       -preload "$<TARGET_FILE:${runtime}>"
       "$<TARGET_FILE:${target}>")
-  set_tests_properties("craps-roll-interpose-${MODULE}" PROPERTIES TIMEOUT 90)
+  set_tests_properties("craps-roll-interpose-${MODULE}" PROPERTIES TIMEOUT 20)
   add_dependencies(craps-roll-interpose-tests "${target}")
 endfunction()

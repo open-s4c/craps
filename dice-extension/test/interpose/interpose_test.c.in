@@ -205,6 +205,8 @@ test_FOO(void)
     $__end();
 
     /* Call the intercepted symbol directly, including libc leaf functions. */
+    fprintf(stderr, "[craps-roll-test] FOO\\n");
+    fflush(stderr);
     enable(fake_FOO);
 #if MM_NOARGS_FOO
     $_returns MM_RETURN_FOO $.!? ret = FOO();
