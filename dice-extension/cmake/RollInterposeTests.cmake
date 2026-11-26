@@ -63,7 +63,7 @@ function(craps_roll_add_interpose_test MODULE)
       "-DINCL='${TEST_HEADER}'"
       "-DFOO=${escaped_functions}"
       ${mappings}
-      "${templates}/interpose_test.c.in"
+      "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../test/interpose/interpose_test.c.in"
       > "${target}_.c.tmp"
     COMMAND "${CMAKE_COMMAND}" -E rename "${target}_.c.tmp" "${target}_.c"
     COMMAND $<TARGET_FILE:tmplr>
@@ -77,7 +77,7 @@ function(craps_roll_add_interpose_test MODULE)
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS
       tmplr
-      "${templates}/interpose_test.c.in"
+      "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../test/interpose/interpose_test.c.in"
       "${templates}/interposed_.h.in"
       "${templates}/interposed__.h.in"
       ${TEST_MAPPINGS})
