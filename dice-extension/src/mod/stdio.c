@@ -2,6 +2,23 @@
  * Copyright (C) 2026 Huawei Technologies Co., Ltd.
  * SPDX-License-Identifier: 0BSD
  */
+/* Define the actual libc symbols, not the fortified inline or LFS redirects. */
+#ifdef _FORTIFY_SOURCE
+#undef _FORTIFY_SOURCE
+#endif
+#ifdef _FILE_OFFSET_BITS
+#undef _FILE_OFFSET_BITS
+#endif
+#ifdef _TIME_BITS
+#undef _TIME_BITS
+#endif
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+
 #include <dice/chains/intercept.h>
 #include <dice/events/stdio.h>
 #include <dice/interpose.h>
@@ -816,6 +833,273 @@ INTERPOSE(int, vsprintf, char *restrict str, const char *restrict format, va_lis
     return ev.ret;
 }
 
+INTERPOSE(int, renameat, int olddirfd, const char *oldpath, int newdirfd, const char *newpath)
+{
+    int saved_errno = errno;
+    struct renameat_event ev = {
+        .pc       = INTERPOSE_PC,
+        .olddirfd = olddirfd,
+        .oldpath  = oldpath,
+        .newdirfd = newdirfd,
+        .newpath  = newpath,
+        .ret      = 0,
+        .errno_   = saved_errno,
+        .func     = REAL_FUNC(renameat),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_RENAMEAT, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.olddirfd, ev.oldpath, ev.newdirfd, ev.newpath);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_RENAMEAT, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+
+#if defined(__linux__) && defined(__GLIBC__)
+#if __GLIBC_PREREQ(2, 28)
+INTERPOSE(int, renameat2, int olddirfd, const char *oldpath, int newdirfd, const char *newpath, unsigned int flags)
+{
+    int saved_errno = errno;
+    struct renameat2_event ev = {
+        .pc       = INTERPOSE_PC,
+        .olddirfd = olddirfd,
+        .oldpath  = oldpath,
+        .newdirfd = newdirfd,
+        .newpath  = newpath,
+        .flags    = flags,
+        .ret      = 0,
+        .errno_   = saved_errno,
+        .func     = REAL_FUNC(renameat2),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_RENAMEAT2, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.olddirfd, ev.oldpath, ev.newdirfd, ev.newpath, ev.flags);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_RENAMEAT2, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+#endif
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+INTERPOSE(FILE *, tmpfile64, void)
+{
+    int saved_errno = errno;
+    struct tmpfile64_event ev = {
+        .pc     = INTERPOSE_PC,
+        .ret    = NULL,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(tmpfile64),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_TMPFILE64, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func();
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_TMPFILE64, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+INTERPOSE(FILE *, freopen64, const char *path, const char *mode, FILE *stream)
+{
+    int saved_errno = errno;
+    struct freopen64_event ev = {
+        .pc     = INTERPOSE_PC,
+        .path   = path,
+        .mode   = mode,
+        .stream = stream,
+        .ret    = NULL,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(freopen64),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FREOPEN64, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.path, ev.mode, ev.stream);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FREOPEN64, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+#endif
+
+INTERPOSE(int, fseeko, FILE *stream, off_t offset, int whence)
+{
+    int saved_errno = errno;
+    struct fseeko_event ev = {
+        .pc     = INTERPOSE_PC,
+        .stream = stream,
+        .offset = offset,
+        .whence = whence,
+        .ret    = 0,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(fseeko),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FSEEKO, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.stream, ev.offset, ev.whence);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FSEEKO, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+
+#if defined(__linux__) && defined(__GLIBC__)
+INTERPOSE(int, fseeko64, FILE *stream, off64_t offset, int whence)
+{
+    int saved_errno = errno;
+    struct fseeko64_event ev = {
+        .pc     = INTERPOSE_PC,
+        .stream = stream,
+        .offset = offset,
+        .whence = whence,
+        .ret    = 0,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(fseeko64),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FSEEKO64, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.stream, ev.offset, ev.whence);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FSEEKO64, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+#endif
+
+INTERPOSE(off_t, ftello, FILE *stream)
+{
+    int saved_errno = errno;
+    struct ftello_event ev = {
+        .pc     = INTERPOSE_PC,
+        .stream = stream,
+        .ret    = 0,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(ftello),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FTELLO, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.stream);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FTELLO, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+
+#if defined(__linux__) && defined(__GLIBC__)
+INTERPOSE(off64_t, ftello64, FILE *stream)
+{
+    int saved_errno = errno;
+    struct ftello64_event ev = {
+        .pc     = INTERPOSE_PC,
+        .stream = stream,
+        .ret    = 0,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(ftello64),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FTELLO64, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.stream);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FTELLO64, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+INTERPOSE(int, fgetpos64, FILE *stream, fpos64_t *pos)
+{
+    int saved_errno = errno;
+    struct fgetpos64_event ev = {
+        .pc     = INTERPOSE_PC,
+        .stream = stream,
+        .pos    = pos,
+        .ret    = 0,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(fgetpos64),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FGETPOS64, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.stream, ev.pos);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FGETPOS64, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+INTERPOSE(int, fsetpos64, FILE *stream, const fpos64_t *pos)
+{
+    int saved_errno = errno;
+    struct fsetpos64_event ev = {
+        .pc     = INTERPOSE_PC,
+        .stream = stream,
+        .pos    = pos,
+        .ret    = 0,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(fsetpos64),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FSETPOS64, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.stream, ev.pos);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FSETPOS64, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+INTERPOSE(size_t, __fread_chk, void *ptr, size_t ptrlen, size_t size, size_t n, FILE *stream)
+{
+    int saved_errno = errno;
+    struct fread_chk_event ev = {
+        .pc     = INTERPOSE_PC,
+        .ptr    = ptr,
+        .ptrlen = ptrlen,
+        .size   = size,
+        .n      = n,
+        .stream = stream,
+        .ret    = 0,
+        .errno_ = saved_errno,
+        .func   = REAL_FUNC(__fread_chk),
+    };
+
+    metadata_t md = {0};
+    PS_PUBLISH(INTERCEPT_BEFORE, EVENT_FREAD_CHK, &ev, &md);
+    errno = ev.errno_;
+    ev.ret = ev.func(ev.ptr, ev.ptrlen, ev.size, ev.n, ev.stream);
+    ev.errno_ = errno;
+    PS_PUBLISH(INTERCEPT_AFTER, EVENT_FREAD_CHK, &ev, &md);
+    errno = ev.errno_;
+    return ev.ret;
+}
+#endif
+
 /* Advertise event types */
 PS_ADVERTISE_TYPE(EVENT_CLEARERR)
 PS_ADVERTISE_TYPE(EVENT_FCLOSE)
@@ -853,6 +1137,17 @@ PS_ADVERTISE_TYPE(EVENT_VFPRINTF)
 PS_ADVERTISE_TYPE(EVENT_VPRINTF)
 PS_ADVERTISE_TYPE(EVENT_VSNPRINTF)
 PS_ADVERTISE_TYPE(EVENT_VSPRINTF)
+PS_ADVERTISE_TYPE(EVENT_RENAMEAT)
+PS_ADVERTISE_TYPE(EVENT_RENAMEAT2)
+PS_ADVERTISE_TYPE(EVENT_TMPFILE64)
+PS_ADVERTISE_TYPE(EVENT_FREOPEN64)
+PS_ADVERTISE_TYPE(EVENT_FSEEKO)
+PS_ADVERTISE_TYPE(EVENT_FSEEKO64)
+PS_ADVERTISE_TYPE(EVENT_FTELLO)
+PS_ADVERTISE_TYPE(EVENT_FTELLO64)
+PS_ADVERTISE_TYPE(EVENT_FGETPOS64)
+PS_ADVERTISE_TYPE(EVENT_FSETPOS64)
+PS_ADVERTISE_TYPE(EVENT_FREAD_CHK)
 
 /* Module init (optional) */
 DICE_MODULE_INIT()

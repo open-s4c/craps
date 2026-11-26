@@ -4,6 +4,12 @@
  */
 #ifndef DICE_STDIO_H
 #define DICE_STDIO_H
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -387,5 +393,142 @@ struct vsscanf_event {
     int errno_;
     int (*func)(const char *, const char *, va_list);
 };
+
+/* Filesystem replay events */
+#define EVENT_RENAMEAT               382
+#define EVENT_RENAMEAT2              383
+#define EVENT_TMPFILE64              384
+#define EVENT_FREOPEN64              385
+#define EVENT_FSEEKO                 386
+#define EVENT_FSEEKO64               387
+#define EVENT_FTELLO                 388
+#define EVENT_FTELLO64               389
+#define EVENT_FGETPOS64              390
+#define EVENT_FSETPOS64              391
+#define EVENT_FREAD_CHK              392
+
+struct renameat_event {
+    const void *pc;
+    int olddirfd;
+    const char *oldpath;
+    int newdirfd;
+    const char *newpath;
+    int ret;
+    int errno_;
+    int (*func)(int, const char *, int, const char *);
+};
+
+#if defined(__linux__) && defined(__GLIBC__)
+#if __GLIBC_PREREQ(2, 28)
+struct renameat2_event {
+    const void *pc;
+    int olddirfd;
+    const char *oldpath;
+    int newdirfd;
+    const char *newpath;
+    unsigned int flags;
+    int ret;
+    int errno_;
+    int (*func)(int, const char *, int, const char *, unsigned int);
+};
+#endif
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct tmpfile64_event {
+    const void *pc;
+    FILE *ret;
+    int errno_;
+    FILE *(*func)(void);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct freopen64_event {
+    const void *pc;
+    const char *path;
+    const char *mode;
+    FILE *stream;
+    FILE *ret;
+    int errno_;
+    FILE *(*func)(const char *, const char *, FILE *);
+};
+#endif
+
+struct fseeko_event {
+    const void *pc;
+    FILE *stream;
+    off_t offset;
+    int whence;
+    int ret;
+    int errno_;
+    int (*func)(FILE *, off_t, int);
+};
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct fseeko64_event {
+    const void *pc;
+    FILE *stream;
+    off64_t offset;
+    int whence;
+    int ret;
+    int errno_;
+    int (*func)(FILE *, off64_t, int);
+};
+#endif
+
+struct ftello_event {
+    const void *pc;
+    FILE *stream;
+    off_t ret;
+    int errno_;
+    off_t (*func)(FILE *);
+};
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct ftello64_event {
+    const void *pc;
+    FILE *stream;
+    off64_t ret;
+    int errno_;
+    off64_t (*func)(FILE *);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct fgetpos64_event {
+    const void *pc;
+    FILE *stream;
+    fpos64_t *pos;
+    int ret;
+    int errno_;
+    int (*func)(FILE *, fpos64_t *);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct fsetpos64_event {
+    const void *pc;
+    FILE *stream;
+    const fpos64_t *pos;
+    int ret;
+    int errno_;
+    int (*func)(FILE *, const fpos64_t *);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct fread_chk_event {
+    const void *pc;
+    void *ptr;
+    size_t ptrlen;
+    size_t size;
+    size_t n;
+    FILE *stream;
+    size_t ret;
+    int errno_;
+    size_t (*func)(void *, size_t, size_t, size_t, FILE *);
+};
+#endif
 
 #endif /* DICE_STDIO_H */
