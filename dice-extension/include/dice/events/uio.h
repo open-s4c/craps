@@ -7,12 +7,6 @@
 
 #include <sys/uio.h>
 
-#ifndef DICE_ROLLED
-#define EVENT_READV   135
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_WRITEV  136
-#endif
 
 struct readv_event {
     const void *pc;

@@ -10,42 +10,6 @@
 #endif
 #include <dirent.h>
 
-#ifndef DICE_ROLLED
-#define EVENT_CLOSEDIR  267
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_FDOPENDIR 268
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_OPENDIR   269
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_READDIR   270
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_READDIR_R 271
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_REWINDDIR 272
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_SEEKDIR   273
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_TELLDIR   274
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_SCANDIR   281
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_SCANDIRAT 282
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_SCANDIR64   283
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_SCANDIRAT64 284
-#endif
 
 struct closedir_event {
     const void *pc;

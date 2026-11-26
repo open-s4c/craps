@@ -1,6 +1,6 @@
-; Single Dice Roll configuration used by Craps and dice-rs.
-; Preserve the original trace event numbers from ids.dice.
-(include "ids.dice")
+; Full Dice Roll configuration for Craps. No event IDs are assigned here.
+; Dice Roll derives event, chain and module slot IDs from the declarations.
+; The recorder and replayer MUST use the generated bindings from this config.
 
 ; Import all supported built-in modules. Actual compiled modules are selected
 ; through Cargo features and DICE_MODULES; callbacks remain enabled.
@@ -17,7 +17,9 @@
 (import (dice tsan))
 (import (dice stacktrace))
 
-; External C modules, each with a single matching Roll slot.
+; Import external interceptor manifests. Each declares its own published
+; events and init subscription. The numeric IDs are assigned by Dice Roll.
+; Callbacks stay enabled so Rust subscribers can register dynamically.
 (import (dice dirent))
 (import (dice epoll))
 (import (dice eventfd))

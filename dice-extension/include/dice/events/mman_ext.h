@@ -9,12 +9,6 @@
 
 #include <sys/mman.h>
 
-#ifndef DICE_ROLLED
-#define EVENT_MREMAP   259
-#endif
-#ifndef DICE_ROLLED
-#define EVENT_MPROTECT 260
-#endif
 
 struct mremap_event {
     const void *pc;
