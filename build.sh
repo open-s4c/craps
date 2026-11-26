@@ -7,7 +7,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 export DICE_EXTENSION_DIRS="$ROOT/dice-extension"
 export DICE_ROLL_CONFIG="$ROOT/dice-extension/roll/craps.dice"
 export DICE_ROLL_IMPORT_PATHS="dice=$ROOT/dice-extension/roll"
-export DICE_MODULES="dirent;fcntl;ioctl;mman_ext;poll;pthread_detach;pthread_key;pthread_once;socket;stdio;time;uio;unistd;syscall"
+export DICE_MODULES="dirent;fcntl;ioctl;mman_ext;poll;pthread_detach;pthread_key;pthread_once;socket;stat;stdio;time;uio;unistd;syscall"
 if [ "$(uname -s)" = Linux ]; then
     DICE_MODULES="$DICE_MODULES;eventfd;random;epoll"
 fi
