@@ -1,0 +1,3 @@
+(module pthread_detach
+  (subscribes (CHAIN_DICE_CONTROL EVENT_DICE_INIT))
+)

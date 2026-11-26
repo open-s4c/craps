@@ -1,0 +1,3 @@
+(module pthread_key
+  (subscribes (CHAIN_DICE_CONTROL EVENT_DICE_INIT))
+)

@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 #include <dice/chains/intercept.h>
-#include <dice/events/pthread.h>
+#include <dice/events/pthread_ext.h>
 #include <dice/interpose.h>
 #include <dice/module.h>
 
