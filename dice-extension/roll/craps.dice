@@ -32,6 +32,7 @@
 (import (dice pthread_once))
 (import (dice random))
 (import (dice socket))
+(import (dice stat))
 (import (dice stdio))
 (import (dice syscall))
 (import (dice time))

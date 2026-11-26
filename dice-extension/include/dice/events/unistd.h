@@ -5,8 +5,13 @@
 #ifndef DICE_UNISTD_H
 #define DICE_UNISTD_H
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
 #include <unistd.h>
-
 
 struct access_event {
     const void *pc;
@@ -748,5 +753,173 @@ struct syscall_event {
     int errno_;
     int (*func)(long number, ...);
 };
+
+/* Filesystem replay events */
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct pread64_event {
+    const void *pc;
+    int fd;
+    void *buf;
+    size_t count;
+    off64_t offset;
+    ssize_t ret;
+    int errno_;
+    ssize_t (*func)(int, void *, size_t, off64_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct pwrite64_event {
+    const void *pc;
+    int fd;
+    const void *buf;
+    size_t count;
+    off64_t offset;
+    ssize_t ret;
+    int errno_;
+    ssize_t (*func)(int, const void *, size_t, off64_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct lseek64_event {
+    const void *pc;
+    int fd;
+    off64_t offset;
+    int whence;
+    off64_t ret;
+    int errno_;
+    off64_t (*func)(int, off64_t, int);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct truncate64_event {
+    const void *pc;
+    const char *path;
+    off64_t length;
+    int ret;
+    int errno_;
+    int (*func)(const char *, off64_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct ftruncate64_event {
+    const void *pc;
+    int fd;
+    off64_t length;
+    int ret;
+    int errno_;
+    int (*func)(int, off64_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct lockf64_event {
+    const void *pc;
+    int fd;
+    int op;
+    off64_t size;
+    int ret;
+    int errno_;
+    int (*func)(int, int, off64_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+#if __GLIBC_PREREQ(2, 34)
+struct close_range_event {
+    const void *pc;
+    unsigned int first;
+    unsigned int last;
+    int flags;
+    int ret;
+    int errno_;
+    int (*func)(unsigned int, unsigned int, int);
+};
+#endif
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct read_chk_event {
+    const void *pc;
+    int fd;
+    void *buf;
+    size_t count;
+    size_t buflen;
+    ssize_t ret;
+    int errno_;
+    ssize_t (*func)(int, void *, size_t, size_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct pread_chk_event {
+    const void *pc;
+    int fd;
+    void *buf;
+    size_t count;
+    off_t offset;
+    size_t buflen;
+    ssize_t ret;
+    int errno_;
+    ssize_t (*func)(int, void *, size_t, off_t, size_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct pread64_chk_event {
+    const void *pc;
+    int fd;
+    void *buf;
+    size_t count;
+    off64_t offset;
+    size_t buflen;
+    ssize_t ret;
+    int errno_;
+    ssize_t (*func)(int, void *, size_t, off64_t, size_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct readlink_chk_event {
+    const void *pc;
+    const char *path;
+    char *buf;
+    size_t bufsiz;
+    size_t buflen;
+    ssize_t ret;
+    int errno_;
+    ssize_t (*func)(const char *, char *, size_t, size_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct readlinkat_chk_event {
+    const void *pc;
+    int dirfd;
+    const char *path;
+    char *buf;
+    size_t bufsiz;
+    size_t buflen;
+    ssize_t ret;
+    int errno_;
+    ssize_t (*func)(int, const char *, char *, size_t, size_t);
+};
+#endif
+
+#if defined(__linux__) && defined(__GLIBC__)
+struct getcwd_chk_event {
+    const void *pc;
+    char *buf;
+    size_t size;
+    size_t buflen;
+    char *ret;
+    int errno_;
+    char *(*func)(char *, size_t, size_t);
+};
+#endif
 
 #endif /* DICE_UNISTD_H */

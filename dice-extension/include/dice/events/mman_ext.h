@@ -5,10 +5,15 @@
 #ifndef DICE_MMAN_EXT_H
 #define DICE_MMAN_EXT_H
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
 #include <stddef.h>
 
 #include <sys/mman.h>
-
 
 struct mremap_event {
     const void *pc;
@@ -29,5 +34,20 @@ struct mprotect_event {
     int ret;
     int (*func)(void *, size_t, int);
 };
+
+/* Filesystem replay events */
+
+#if defined(__linux__) && defined(__GLIBC__)
+#if __GLIBC_PREREQ(2, 27)
+struct memfd_create_event {
+    const void *pc;
+    const char *name;
+    unsigned int flags;
+    int ret;
+    int errno_;
+    int (*func)(const char *, unsigned int);
+};
+#endif
+#endif
 
 #endif /* DICE_MMAN_EXT_H */

@@ -29,7 +29,7 @@ endfunction()
 
 foreach(module
     dirent fcntl ioctl mman_ext poll pthread_detach pthread_key pthread_once
-    socket stdio time uio unistd)
+    socket stat stdio time uio unistd)
   craps_roll_module(${module})
 endforeach()
 
