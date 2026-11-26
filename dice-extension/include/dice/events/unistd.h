@@ -5,103 +5,275 @@
 #ifndef DICE_UNISTD_H
 #define DICE_UNISTD_H
 
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
-#endif
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE
-#endif
 #include <unistd.h>
 
+#ifndef DICE_ROLLED
 #define EVENT_ACCESS               137
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_ALARM                138
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_BRK                  139
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CHDIR                140
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CHROOT               141
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CHOWN                142
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CLOSE                143
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CONFSTR              144
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CRYPT                145
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CTERMID              146
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CUSERID              147
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_DUP                  148
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_DUP2                 149
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_DUP3                 150
+#endif
+#ifndef DICE_ROLLED
 #define EVENT__EXIT                151
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FACCESSAT            152
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FCHDIR               153
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FCHOWN               154
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FCHOWNAT             155
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETUID               156
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FDATASYNC            157
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FORK                 158
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FPATHCONF            159
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FSYNC                160
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FTRUNCATE            161
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETCWD               162
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETDTABLESIZE        163
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETEGID              164
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETEUID              165
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETGID               166
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETGROUPS            167
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETHOSTID            168
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETLOGIN             169
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETLOGIN_R           170
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETOPT               171
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETPAGESIZE          172
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETPASS              173
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETPGID              174
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETPGRP              175
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETPID               176
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETPPID              177
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETSID               178
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETWD                179
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GET_CURRENT_DIR_NAME 180
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_ISATTY               181
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_LCHOWN               182
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_LINK                 183
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_LINKAT               184
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_LOCKF                185
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_LSEEK                186
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_NICE                 187
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PATHCONF             188
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PAUSE                189
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PIPE                 190
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PIPE2                191
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PREAD                192
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_PWRITE               193
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_READ                 194
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_READLINK             195
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_READLINKAT           196
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_RMDIR                197
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SBRK                 198
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETGID               199
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETHOSTID            200
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETPGID              201
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETPGRP              202
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETREGID             203
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETREUID             204
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETSID               205
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETUID               206
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SLEEP                207
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SWAB                 208
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SYMLINK              209
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SYMLINKAT            210
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SYNC                 211
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SYNCFS               212
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SYSCONF              213
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_TCGETPGRP            214
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_TCSETPGRP            215
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_TRUNCATE             216
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_TTYNAME              217
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_TTYNAME_R            218
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_UALARM               219
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_UNLINK               220
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_UNLINKAT             221
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_USLEEP               222
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_VFORK                223
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_WRITE                224
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SYSCALL              261
+#endif
 
 struct access_event {
     const void *pc;
@@ -843,186 +1015,5 @@ struct syscall_event {
     int errno_;
     int (*func)(long number, ...);
 };
-
-/* Filesystem replay events */
-#define EVENT_PREAD64                352
-#define EVENT_PWRITE64               353
-#define EVENT_LSEEK64                354
-#define EVENT_TRUNCATE64             355
-#define EVENT_FTRUNCATE64            356
-#define EVENT_LOCKF64                357
-#define EVENT_CLOSE_RANGE            358
-#define EVENT_READ_CHK               359
-#define EVENT_PREAD_CHK              360
-#define EVENT_PREAD64_CHK            361
-#define EVENT_READLINK_CHK           362
-#define EVENT_READLINKAT_CHK         363
-#define EVENT_GETCWD_CHK             364
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct pread64_event {
-    const void *pc;
-    int fd;
-    void *buf;
-    size_t count;
-    off64_t offset;
-    ssize_t ret;
-    int errno_;
-    ssize_t (*func)(int, void *, size_t, off64_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct pwrite64_event {
-    const void *pc;
-    int fd;
-    const void *buf;
-    size_t count;
-    off64_t offset;
-    ssize_t ret;
-    int errno_;
-    ssize_t (*func)(int, const void *, size_t, off64_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct lseek64_event {
-    const void *pc;
-    int fd;
-    off64_t offset;
-    int whence;
-    off64_t ret;
-    int errno_;
-    off64_t (*func)(int, off64_t, int);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct truncate64_event {
-    const void *pc;
-    const char *path;
-    off64_t length;
-    int ret;
-    int errno_;
-    int (*func)(const char *, off64_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct ftruncate64_event {
-    const void *pc;
-    int fd;
-    off64_t length;
-    int ret;
-    int errno_;
-    int (*func)(int, off64_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct lockf64_event {
-    const void *pc;
-    int fd;
-    int op;
-    off64_t size;
-    int ret;
-    int errno_;
-    int (*func)(int, int, off64_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-#if __GLIBC_PREREQ(2, 34)
-struct close_range_event {
-    const void *pc;
-    unsigned int first;
-    unsigned int last;
-    int flags;
-    int ret;
-    int errno_;
-    int (*func)(unsigned int, unsigned int, int);
-};
-#endif
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct read_chk_event {
-    const void *pc;
-    int fd;
-    void *buf;
-    size_t count;
-    size_t buflen;
-    ssize_t ret;
-    int errno_;
-    ssize_t (*func)(int, void *, size_t, size_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct pread_chk_event {
-    const void *pc;
-    int fd;
-    void *buf;
-    size_t count;
-    off_t offset;
-    size_t buflen;
-    ssize_t ret;
-    int errno_;
-    ssize_t (*func)(int, void *, size_t, off_t, size_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct pread64_chk_event {
-    const void *pc;
-    int fd;
-    void *buf;
-    size_t count;
-    off64_t offset;
-    size_t buflen;
-    ssize_t ret;
-    int errno_;
-    ssize_t (*func)(int, void *, size_t, off64_t, size_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct readlink_chk_event {
-    const void *pc;
-    const char *path;
-    char *buf;
-    size_t bufsiz;
-    size_t buflen;
-    ssize_t ret;
-    int errno_;
-    ssize_t (*func)(const char *, char *, size_t, size_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct readlinkat_chk_event {
-    const void *pc;
-    int dirfd;
-    const char *path;
-    char *buf;
-    size_t bufsiz;
-    size_t buflen;
-    ssize_t ret;
-    int errno_;
-    ssize_t (*func)(int, const char *, char *, size_t, size_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct getcwd_chk_event {
-    const void *pc;
-    char *buf;
-    size_t size;
-    size_t buflen;
-    char *ret;
-    int errno_;
-    char *(*func)(char *, size_t, size_t);
-};
-#endif
 
 #endif /* DICE_UNISTD_H */

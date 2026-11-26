@@ -8,20 +8,33 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE
-#endif
 #include <fcntl.h>
 #include <inttypes.h>
 
+#ifndef DICE_ROLLED
 #define EVENT_CREAT           129
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_FCNTL           130
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_OPEN            131
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_OPENAT          132
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_OPENAT64        280
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_POSIX_FADVISE   133
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_POSIX_FALLOCATE 134
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_OPEN64          266
+#endif
 
 struct creat_event {
     const void *pc;
@@ -96,89 +109,5 @@ struct open64_event {
     int ret;
     int (*func)(const char *, int, ...);
 };
-
-/* Filesystem replay events */
-#define EVENT_CREAT64                373
-#define EVENT_FCNTL64                374
-#define EVENT_FALLOCATE              375
-#define EVENT_FALLOCATE64            376
-#define EVENT_POSIX_FALLOCATE64      377
-#define EVENT_POSIX_FADVISE64        378
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct creat64_event {
-    const void *pc;
-    const char *path;
-    mode_t mode;
-    int ret;
-    int errno_;
-    int (*func)(const char *, mode_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-#if __GLIBC_PREREQ(2, 28)
-struct fcntl64_event {
-    const void *pc;
-    int fd;
-    int cmd;
-    uint64_t arg;
-    int ret;
-    int errno_;
-    int (*func)(int, int, ...);
-};
-#endif
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct fallocate_event {
-    const void *pc;
-    int fd;
-    int mode;
-    off_t offset;
-    off_t len;
-    int ret;
-    int errno_;
-    int (*func)(int, int, off_t, off_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct fallocate64_event {
-    const void *pc;
-    int fd;
-    int mode;
-    off64_t offset;
-    off64_t len;
-    int ret;
-    int errno_;
-    int (*func)(int, int, off64_t, off64_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct posix_fallocate64_event {
-    const void *pc;
-    int fd;
-    off64_t offset;
-    off64_t len;
-    int ret;
-    int errno_;
-    int (*func)(int, off64_t, off64_t);
-};
-#endif
-
-#if defined(__linux__) && defined(__GLIBC__)
-struct posix_fadvise64_event {
-    const void *pc;
-    int fd;
-    off64_t offset;
-    off64_t len;
-    int advice;
-    int ret;
-    int errno_;
-    int (*func)(int, off64_t, off64_t, int);
-};
-#endif
 
 #endif /* DICE_FCNTL_H */

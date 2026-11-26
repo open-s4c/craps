@@ -7,24 +7,60 @@
 
 #include <sys/socket.h>
 
+#ifndef DICE_ROLLED
 #define EVENT_ACCEPT      104
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_ACCEPT4     105
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_BIND        106
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_CONNECT     107
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETPEERNAME 108
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETSOCKNAME 109
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_GETSOCKOPT  110
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SETSOCKOPT  111
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_LISTEN      112
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_RECV        113
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_RECVFROM    114
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_RECVMSG     115
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SEND        116
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SENDTO      117
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SENDMSG     118
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SHUTDOWN    119
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SOCKET      120
+#endif
+#ifndef DICE_ROLLED
 #define EVENT_SOCKETPAIR  121
+#endif
 
 struct accept_event {
     const void *pc;
