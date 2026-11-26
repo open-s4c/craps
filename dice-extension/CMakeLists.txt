@@ -5,16 +5,11 @@ set(EVENTS_MODULE_DIR
     "${CMAKE_CURRENT_LIST_DIR}/src/mod")
 
 
-# more-events changed DICE_MAX_TYPES from 128 to 280.
-#
-# We deliberately do not force that from here because dice.h has already
-# been configured by the time this directory is entered. The caller needs
-# to configure Dice with -DDICE_MAX_TYPES=280.
-if(DICE_MAX_TYPES LESS 280)
-  message(
-    FATAL_ERROR
-    "The modules require DICE_MAX_TYPES >= 280. "
-    "Configure Dice with -DDICE_MAX_TYPES=280.")
+# Legacy mode must accommodate every existing external event ID (max 321).
+# Rolled mode derives event table sizes from the pinned Roll manifest.
+if(NOT DICE_ROLL_CONFIG AND DICE_MAX_TYPES LESS 322)
+  message(FATAL_ERROR
+          "External events require DICE_MAX_TYPES >= 322 in legacy mode")
 endif()
 
 
@@ -37,7 +32,6 @@ add_event_module(pthread_detach)
 add_event_module(pthread_key)
 add_event_module(pthread_once)
 add_event_module(socket)
-add_event_module(stat)
 add_event_module(stdio)
 add_event_module(time)
 add_event_module(uio)

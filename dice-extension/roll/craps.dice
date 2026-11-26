@@ -13,7 +13,6 @@
 (import (dice pthread_mutex))
 (import (dice pthread_rwlock))
 (import (dice sem))
-(import (dice box))
 (import (dice cxa))
 (import (dice tsan))
 (import (dice stacktrace))
