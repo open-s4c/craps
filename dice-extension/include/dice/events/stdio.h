@@ -13,43 +13,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#define EVENT_CLEARERR     285
-#define EVENT_FCLOSE       286
-#define EVENT_FEOF         287
-#define EVENT_FERROR       288
-#define EVENT_FFLUSH       289
-#define EVENT_FGETC        290
-#define EVENT_FGETPOS      291
-#define EVENT_FGETS        292
-#define EVENT_FOPEN        293
-#define EVENT_FOPEN64      320
-#define EVENT_FPUTC        294
-#define EVENT_FPUTS        295
-#define EVENT_FREAD        296
-#define EVENT_FREOPEN      297
-#define EVENT_FSEEK        298
-#define EVENT_FSETPOS      299
-#define EVENT_FTELL        300
-#define EVENT_FWRITE       301
-#define EVENT_GETC         302
-#define EVENT_GETCHAR      303
-#define EVENT_PERROR       304
-#define EVENT_PUTC         305
-#define EVENT_PUTCHAR      306
-#define EVENT_PUTS         307
-#define EVENT_REMOVE       308
-#define EVENT_RENAME       309
-#define EVENT_REWIND       310
-#define EVENT_SETBUF       311
-#define EVENT_SETVBUF      312
-#define EVENT_TMPFILE      313
-#define EVENT_TMPNAM       314
-#define EVENT_UNGETC       315
-#define EVENT_VFPRINTF     316
-#define EVENT_VPRINTF      317
-#define EVENT_VSNPRINTF    318
-#define EVENT_VSPRINTF     319
-
 struct clearerr_event {
     const void *pc;
     FILE *stream;
@@ -395,17 +358,6 @@ struct vsscanf_event {
 };
 
 /* Filesystem replay events */
-#define EVENT_RENAMEAT               382
-#define EVENT_RENAMEAT2              383
-#define EVENT_TMPFILE64              384
-#define EVENT_FREOPEN64              385
-#define EVENT_FSEEKO                 386
-#define EVENT_FSEEKO64               387
-#define EVENT_FTELLO                 388
-#define EVENT_FTELLO64               389
-#define EVENT_FGETPOS64              390
-#define EVENT_FSETPOS64              391
-#define EVENT_FREAD_CHK              392
 
 struct renameat_event {
     const void *pc;

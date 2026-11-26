@@ -14,19 +14,6 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#define EVENT_CLOSEDIR  267
-#define EVENT_FDOPENDIR 268
-#define EVENT_OPENDIR   269
-#define EVENT_READDIR   270
-#define EVENT_READDIR_R 271
-#define EVENT_REWINDDIR 272
-#define EVENT_SEEKDIR   273
-#define EVENT_TELLDIR   274
-#define EVENT_SCANDIR   281
-#define EVENT_SCANDIRAT 282
-#define EVENT_SCANDIR64   283
-#define EVENT_SCANDIRAT64 284
-
 struct closedir_event {
     const void *pc;
     DIR *dirp;
@@ -177,9 +164,6 @@ struct scandirat64_event {
 };
 
 /* Filesystem replay events */
-#define EVENT_READDIR64              379
-#define EVENT_READDIR64_R            380
-#define EVENT_GETDENTS64             381
 
 #if defined(__linux__) && defined(__GLIBC__)
 struct readdir64_event {

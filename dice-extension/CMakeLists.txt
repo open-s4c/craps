@@ -1,86 +1,51 @@
-set(EVENTS_INCLUDE_DIR
-    "${CMAKE_CURRENT_LIST_DIR}/include")
+# Craps contributes Roll module catalogs only.  Dice Roll compiles each
+# source into the configured dice-roll-runtime object target with the generated
+# header and module slot.  No legacy preload libraries or dispatch tables are
+# built from this extension.
 
-set(EVENTS_MODULE_DIR
-    "${CMAKE_CURRENT_LIST_DIR}/src/mod")
-
-
-# more-events changed DICE_MAX_TYPES from 128 to 280.
-#
-# We deliberately do not force that from here because dice.h has already
-# been configured by the time this directory is entered. The caller needs
-# to configure Dice with -DDICE_MAX_TYPES=280.
-if(DICE_MAX_TYPES LESS 280)
-  message(
-    FATAL_ERROR
-    "The modules require DICE_MAX_TYPES >= 280. "
-    "Configure Dice with -DDICE_MAX_TYPES=280.")
+if(NOT DICE_ROLL_CONFIG)
+  message(FATAL_ERROR
+          "Craps interceptors require DICE_ROLL_CONFIG (Dice Roll only)")
 endif()
 
+set(EVENTS_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/include")
+set(EVENTS_MODULE_DIR "${CMAKE_CURRENT_LIST_DIR}/src/mod")
 
-function(add_event_module MODULE)
-  dice_add_interpose_module(
-    ${MODULE}
-    SOURCES
-      "${EVENTS_MODULE_DIR}/${MODULE}.c"
-    INCLUDE_DIRECTORIES
-      "${EVENTS_INCLUDE_DIR}")
+function(craps_roll_module MODULE)
+  set(sources "${EVENTS_MODULE_DIR}/${MODULE}.c")
+  if(MODULE STREQUAL "syscall")
+    list(APPEND sources "${EVENTS_MODULE_DIR}/syscall.S")
+  endif()
+
+  # The catalog is intentionally excluded from ALL. Its SOURCES, SOURCE_DIR
+  # and INCLUDE_DIRECTORIES are consumed by add_dice_mods(), which compiles
+  # those sources into a single generated runtime.
+  add_library(dice-${MODULE}.o OBJECT EXCLUDE_FROM_ALL ${sources})
+  target_include_directories(
+    dice-${MODULE}.o PRIVATE "${EVENTS_INCLUDE_DIR}")
+  set_target_properties(dice-${MODULE}.o PROPERTIES
+                        DICE_MODULE_OPTIONS "")
 endfunction()
 
+foreach(module
+    dirent fcntl ioctl mman_ext poll pthread_detach pthread_key pthread_once
+    socket stat stdio time uio unistd)
+  craps_roll_module(${module})
+endforeach()
 
-add_event_module(dirent)
-add_event_module(fcntl)
-add_event_module(ioctl)
-add_event_module(mman_ext)
-add_event_module(poll)
-add_event_module(pthread_detach)
-add_event_module(pthread_key)
-add_event_module(pthread_once)
-add_event_module(socket)
-add_event_module(stat)
-add_event_module(stdio)
-add_event_module(time)
-add_event_module(uio)
-add_event_module(unistd)
-
-
-# more-events excluded these two on Apple.
 if(NOT APPLE)
-  add_event_module(eventfd)
-  add_event_module(random)
+  craps_roll_module(eventfd)
+  craps_roll_module(random)
 endif()
 
-
-# more-events excluded epoll on Apple/BSD.
-if(NOT APPLE AND NOT BSD)
-  add_event_module(epoll)
-endif()
-
-
-# syscall is special: syscall.c is only the before/after support code.
-# syscall.S contains the actual interposed syscall() symbol.
-#
-# syscall.S itself explicitly supports Linux x86_64/aarch64 only.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  dice_add_interpose_module(
-    syscall
-    SOURCES
-      "${EVENTS_MODULE_DIR}/syscall.c"
-      "${EVENTS_MODULE_DIR}/syscall.S"
-    INCLUDE_DIRECTORIES
-      "${EVENTS_INCLUDE_DIR}"
-    COMPILE_OPTIONS
-      -fPIC)
+  craps_roll_module(epoll)
+  craps_roll_module(syscall)
 endif()
 
 
-# Install the externally owned event headers into the same include hierarchy
-# as Dice's built-in event headers.
-install(
-  DIRECTORY
-    "${EVENTS_INCLUDE_DIR}/dice"
-  DESTINATION
-    include)
+# Generated interposition behavior tests stay enabled for Roll builds.
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/RollInterposeTests.cmake")
 
 # ------------------------------------------------------------------------------
 # Tests
@@ -138,7 +103,7 @@ if(DICE_TESTS)
           crypt)
     endif()
 
-    dice_add_interpose_test(
+    craps_roll_add_interpose_test(
       ${MODULE}
       HEADER "${HEADER}"
       FUNCTIONS ${ARGN}

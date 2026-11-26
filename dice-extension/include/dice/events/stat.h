@@ -15,36 +15,6 @@
 #include <sys/stat.h>
 
 /* Filesystem replay events */
-#define EVENT_CHMOD                  322
-#define EVENT_FCHMOD                 323
-#define EVENT_FCHMODAT               324
-#define EVENT_LCHMOD                 325
-#define EVENT_FSTAT                  326
-#define EVENT_FSTATAT                327
-#define EVENT_LSTAT                  328
-#define EVENT_STAT                   329
-#define EVENT_FSTAT64                330
-#define EVENT_FSTATAT64              331
-#define EVENT_LSTAT64                332
-#define EVENT_STAT64                 333
-#define EVENT_STATX                  334
-#define EVENT_MKDIR                  335
-#define EVENT_MKDIRAT                336
-#define EVENT_MKFIFO                 337
-#define EVENT_MKFIFOAT               338
-#define EVENT_MKNOD                  339
-#define EVENT_MKNODAT                340
-#define EVENT_UMASK                  341
-#define EVENT_XSTAT                  342
-#define EVENT_FXSTAT                 343
-#define EVENT_LXSTAT                 344
-#define EVENT_FXSTATAT               345
-#define EVENT_XSTAT64                346
-#define EVENT_FXSTAT64               347
-#define EVENT_LXSTAT64               348
-#define EVENT_FXSTATAT64             349
-#define EVENT_XMKNOD                 350
-#define EVENT_XMKNODAT               351
 
 struct chmod_event {
     const void *pc;

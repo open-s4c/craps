@@ -7,7 +7,6 @@
 
 #include <sys/eventfd.h>
 
-#define EVENT_EVENTFD 128
 
 struct eventfd_event {
     const void *pc;

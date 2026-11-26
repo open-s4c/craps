@@ -13,96 +13,6 @@
 #endif
 #include <unistd.h>
 
-#define EVENT_ACCESS               137
-#define EVENT_ALARM                138
-#define EVENT_BRK                  139
-#define EVENT_CHDIR                140
-#define EVENT_CHROOT               141
-#define EVENT_CHOWN                142
-#define EVENT_CLOSE                143
-#define EVENT_CONFSTR              144
-#define EVENT_CRYPT                145
-#define EVENT_CTERMID              146
-#define EVENT_CUSERID              147
-#define EVENT_DUP                  148
-#define EVENT_DUP2                 149
-#define EVENT_DUP3                 150
-#define EVENT__EXIT                151
-#define EVENT_FACCESSAT            152
-#define EVENT_FCHDIR               153
-#define EVENT_FCHOWN               154
-#define EVENT_FCHOWNAT             155
-#define EVENT_GETUID               156
-#define EVENT_FDATASYNC            157
-#define EVENT_FORK                 158
-#define EVENT_FPATHCONF            159
-#define EVENT_FSYNC                160
-#define EVENT_FTRUNCATE            161
-#define EVENT_GETCWD               162
-#define EVENT_GETDTABLESIZE        163
-#define EVENT_GETEGID              164
-#define EVENT_GETEUID              165
-#define EVENT_GETGID               166
-#define EVENT_GETGROUPS            167
-#define EVENT_GETHOSTID            168
-#define EVENT_GETLOGIN             169
-#define EVENT_GETLOGIN_R           170
-#define EVENT_GETOPT               171
-#define EVENT_GETPAGESIZE          172
-#define EVENT_GETPASS              173
-#define EVENT_GETPGID              174
-#define EVENT_GETPGRP              175
-#define EVENT_GETPID               176
-#define EVENT_GETPPID              177
-#define EVENT_GETSID               178
-#define EVENT_GETWD                179
-#define EVENT_GET_CURRENT_DIR_NAME 180
-#define EVENT_ISATTY               181
-#define EVENT_LCHOWN               182
-#define EVENT_LINK                 183
-#define EVENT_LINKAT               184
-#define EVENT_LOCKF                185
-#define EVENT_LSEEK                186
-#define EVENT_NICE                 187
-#define EVENT_PATHCONF             188
-#define EVENT_PAUSE                189
-#define EVENT_PIPE                 190
-#define EVENT_PIPE2                191
-#define EVENT_PREAD                192
-#define EVENT_PWRITE               193
-#define EVENT_READ                 194
-#define EVENT_READLINK             195
-#define EVENT_READLINKAT           196
-#define EVENT_RMDIR                197
-#define EVENT_SBRK                 198
-#define EVENT_SETGID               199
-#define EVENT_SETHOSTID            200
-#define EVENT_SETPGID              201
-#define EVENT_SETPGRP              202
-#define EVENT_SETREGID             203
-#define EVENT_SETREUID             204
-#define EVENT_SETSID               205
-#define EVENT_SETUID               206
-#define EVENT_SLEEP                207
-#define EVENT_SWAB                 208
-#define EVENT_SYMLINK              209
-#define EVENT_SYMLINKAT            210
-#define EVENT_SYNC                 211
-#define EVENT_SYNCFS               212
-#define EVENT_SYSCONF              213
-#define EVENT_TCGETPGRP            214
-#define EVENT_TCSETPGRP            215
-#define EVENT_TRUNCATE             216
-#define EVENT_TTYNAME              217
-#define EVENT_TTYNAME_R            218
-#define EVENT_UALARM               219
-#define EVENT_UNLINK               220
-#define EVENT_UNLINKAT             221
-#define EVENT_USLEEP               222
-#define EVENT_VFORK                223
-#define EVENT_WRITE                224
-#define EVENT_SYSCALL              261
-
 struct access_event {
     const void *pc;
     const char *path;
@@ -845,19 +755,6 @@ struct syscall_event {
 };
 
 /* Filesystem replay events */
-#define EVENT_PREAD64                352
-#define EVENT_PWRITE64               353
-#define EVENT_LSEEK64                354
-#define EVENT_TRUNCATE64             355
-#define EVENT_FTRUNCATE64            356
-#define EVENT_LOCKF64                357
-#define EVENT_CLOSE_RANGE            358
-#define EVENT_READ_CHK               359
-#define EVENT_PREAD_CHK              360
-#define EVENT_PREAD64_CHK            361
-#define EVENT_READLINK_CHK           362
-#define EVENT_READLINKAT_CHK         363
-#define EVENT_GETCWD_CHK             364
 
 #if defined(__linux__) && defined(__GLIBC__)
 struct pread64_event {

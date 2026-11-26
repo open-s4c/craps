@@ -7,12 +7,6 @@
 
 #include <sys/epoll.h>
 
-#define EVENT_EPOLL_CREATE  122
-#define EVENT_EPOLL_CREATE1 123
-#define EVENT_EPOLL_CTL     124
-#define EVENT_EPOLL_WAIT    125
-#define EVENT_EPOLL_PWAIT   126
-#define EVENT_EPOLL_PWAIT2  127
 
 struct epoll_create_event {
     const void *pc;

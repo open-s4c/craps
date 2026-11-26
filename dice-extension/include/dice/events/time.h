@@ -12,39 +12,6 @@
 typedef clockid_t timer_t;
 #endif
 
-#define EVENT_ASCTIME          226
-#define EVENT_ASCTIME_R        227
-#define EVENT_CLOCK            228
-#define EVENT_CLOCK_GETRES     229
-#define EVENT_CLOCK_GETTIME    230
-#define EVENT_CLOCK_SETTIME    231
-#define EVENT_CTIME            232
-#define EVENT_CTIME_R          233
-#define EVENT_DIFFTIME         234
-#define EVENT_GETDATE          235
-#define EVENT_GETDATE_R        236
-#define EVENT_GMTIME           237
-#define EVENT_GMTIME_R         238
-#define EVENT_LOCALTIME        239
-#define EVENT_LOCALTIME_R      240
-#define EVENT_MKTIME           241
-#define EVENT_NANOSLEEP        242
-#define EVENT_STRFTIME         243
-#define EVENT_STRFTIME_L       244
-#define EVENT_STRPTIME         245
-#define EVENT_TIME             246
-#define EVENT_TIMER_CREATE     247
-#define EVENT_TIMER_DELETE     248
-#define EVENT_TIMER_GETTIME    249
-#define EVENT_TIMER_GETOVERRUN 250
-#define EVENT_TIMER_SETTIME    251
-#define EVENT_TZSET            252
-#define EVENT_GETITIMER        253
-#define EVENT_SETITIMER        254
-#define EVENT_GETTIMEOFDAY     255
-#define EVENT_SETTIMEOFDAY     256
-#define EVENT_SELECT           257
-#define EVENT_UTIMES           258
 
 struct asctime_event {
     const void *pc;

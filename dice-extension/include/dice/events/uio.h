@@ -13,9 +13,6 @@
 #endif
 #include <sys/uio.h>
 
-#define EVENT_READV   135
-#define EVENT_WRITEV  136
-
 struct readv_event {
     const void *pc;
     int fd;
@@ -37,14 +34,6 @@ struct writev_event {
 };
 
 /* Filesystem replay events */
-#define EVENT_PREADV                 365
-#define EVENT_PREADV64               366
-#define EVENT_PREADV2                367
-#define EVENT_PREADV64V2             368
-#define EVENT_PWRITEV                369
-#define EVENT_PWRITEV64              370
-#define EVENT_PWRITEV2               371
-#define EVENT_PWRITEV64V2            372
 
 #if defined(__linux__) && defined(__GLIBC__)
 struct preadv_event {

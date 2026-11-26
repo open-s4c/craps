@@ -14,15 +14,6 @@
 #include <fcntl.h>
 #include <inttypes.h>
 
-#define EVENT_CREAT           129
-#define EVENT_FCNTL           130
-#define EVENT_OPEN            131
-#define EVENT_OPENAT          132
-#define EVENT_OPENAT64        280
-#define EVENT_POSIX_FADVISE   133
-#define EVENT_POSIX_FALLOCATE 134
-#define EVENT_OPEN64          266
-
 struct creat_event {
     const void *pc;
     const char *path;
@@ -98,12 +89,6 @@ struct open64_event {
 };
 
 /* Filesystem replay events */
-#define EVENT_CREAT64                373
-#define EVENT_FCNTL64                374
-#define EVENT_FALLOCATE              375
-#define EVENT_FALLOCATE64            376
-#define EVENT_POSIX_FALLOCATE64      377
-#define EVENT_POSIX_FADVISE64        378
 
 #if defined(__linux__) && defined(__GLIBC__)
 struct creat64_event {

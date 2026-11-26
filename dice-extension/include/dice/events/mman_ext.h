@@ -15,9 +15,6 @@
 
 #include <sys/mman.h>
 
-#define EVENT_MREMAP   259
-#define EVENT_MPROTECT 260
-
 struct mremap_event {
     const void *pc;
     void *old_address;
@@ -39,7 +36,6 @@ struct mprotect_event {
 };
 
 /* Filesystem replay events */
-#define EVENT_MEMFD_CREATE           393
 
 #if defined(__linux__) && defined(__GLIBC__)
 #if __GLIBC_PREREQ(2, 27)

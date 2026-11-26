@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <sys/ioctl.h>
 
-#define EVENT_IOCTL 321
 
 /*
  * ioctl() is variadic.  argp stores the raw third-argument value, which can

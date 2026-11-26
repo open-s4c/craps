@@ -1,0 +1,40 @@
+; Full Dice Roll configuration for Craps. No event IDs are assigned here.
+; Dice Roll derives event, chain and module slot IDs from the declarations.
+; The recorder and replayer MUST use the generated bindings from this config.
+
+; Import all supported built-in modules. Actual compiled modules are selected
+; through Cargo features and DICE_MODULES; callbacks remain enabled.
+(import (dice self))
+(import (dice pthread_create))
+(import (dice malloc))
+(import (dice memcpy))
+(import (dice mman))
+(import (dice pthread_cond))
+(import (dice pthread_mutex))
+(import (dice pthread_rwlock))
+(import (dice sem))
+(import (dice cxa))
+(import (dice tsan))
+(import (dice stacktrace))
+
+; Import external interceptor manifests. Each declares its own published
+; events and init subscription. The numeric IDs are assigned by Dice Roll.
+; Callbacks stay enabled so Rust subscribers can register dynamically.
+(import (dice dirent))
+(import (dice epoll))
+(import (dice eventfd))
+(import (dice fcntl))
+(import (dice ioctl))
+(import (dice mman_ext))
+(import (dice poll))
+(import (dice pthread_detach))
+(import (dice pthread_key))
+(import (dice pthread_once))
+(import (dice random))
+(import (dice socket))
+(import (dice stat))
+(import (dice stdio))
+(import (dice syscall))
+(import (dice time))
+(import (dice uio))
+(import (dice unistd))

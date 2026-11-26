@@ -9,13 +9,6 @@
 
 #include <dice/events/thread.h>
 
-#define EVENT_BEFORE_PTHREAD_ONCE 264
-#define EVENT_AFTER_PTHREAD_ONCE  265
-#define EVENT_PTHREAD_KEY_CREATE   275
-#define EVENT_PTHREAD_KEY_DELETE   276
-#define EVENT_PTHREAD_SETSPECIFIC  277
-#define EVENT_PTHREAD_GETSPECIFIC  278
-#define EVENT_PTHREAD_DETACH       279
 
 struct before_pthread_once_event {
     const void *pc;

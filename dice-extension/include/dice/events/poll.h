@@ -11,8 +11,6 @@
 #include <poll.h>
 #include <signal.h>
 
-#define EVENT_POLL 103
-#define EVENT_PPOLL 263
 
 struct poll_event {
     const void *pc;

@@ -1,0 +1,48 @@
+name: Build Craps with Dice Roll
+
+on:
+  pull_request:
+  push:
+    branches:
+      - roll-integration
+
+jobs:
+  roll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install native build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build clang libclang-dev pkg-config
+      - name: Check C publications match Dice Roll declarations
+        run: python3 dice-extension/test/verify_roll.py
+      - name: Check Roll module configuration
+        run: |
+          cmake -S dice-rs/dice -B /tmp/dice-roll-check \
+            -DDICE_TESTS=OFF -DDICE_BENCHMARKS=OFF -DDICE_LTO=OFF
+          cmake --build /tmp/dice-roll-check --target dice-cli -j 2
+          /tmp/dice-roll-check/src/cli/dice-roll \
+            -I "dice=$PWD/dice-extension/roll" \
+            --check dice-extension/roll/craps.dice
+          /tmp/dice-roll-check/src/cli/dice-roll \
+            -I "dice=$PWD/dice-extension/roll" \
+            --query dice-extension/roll/craps.dice > /tmp/roll-query.txt
+          test "$(grep -c '^event EVENT_' /tmp/roll-query.txt)" -gt 100
+      - name: Configure Roll interposition tests
+        run: |
+          cmake -S dice-rs/dice -B /tmp/craps-roll-tests \
+            -DDICE_TESTS=ON -DDICE_BENCHMARKS=OFF -DDICE_LTO=OFF \
+            "-DDICE_EXTENSION_DIRS=$PWD/dice-extension" \
+            "-DDICE_ROLL_CONFIG=$PWD/dice-extension/roll/craps.dice" \
+            "-DDICE_ROLL_MODULES=self" \
+            "-DDICE_ROLL_IMPORT_PATHS=dice=$PWD/dice-extension/roll"
+      - name: Compile restored Roll interposition tests
+        run: cmake --build /tmp/craps-roll-tests --target craps-roll-interpose-tests -j 2
+      - name: Run restored Roll interposition tests
+        run: ctest --test-dir /tmp/craps-roll-tests --output-on-failure -R '^craps-roll-interpose-'
+      - name: Build the configured recorder/replayer
+        run: ./build.sh
