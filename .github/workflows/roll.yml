@@ -38,6 +38,7 @@ jobs:
             -DDICE_TESTS=ON -DDICE_BENCHMARKS=OFF -DDICE_LTO=OFF \
             "-DDICE_EXTENSION_DIRS=$PWD/dice-extension" \
             "-DDICE_ROLL_CONFIG=$PWD/dice-extension/roll/craps.dice" \
+            "-DDICE_ROLL_MODULES=self" \
             "-DDICE_ROLL_IMPORT_PATHS=dice=$PWD/dice-extension/roll"
       - name: Compile restored Roll interposition tests
         run: cmake --build /tmp/craps-roll-tests --target craps-roll-interpose-tests -j 2
